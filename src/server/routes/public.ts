@@ -10,6 +10,10 @@ import { validateBody, reportSchema } from '../middleware/validate.js';
 const publicRoutes = new Hono<AppEnv>();
 
 // --- Prayer Times (proxy to Aladhan API, 1-hour cache) ---
+// Koordinat Poncol, Magetan, Jawa Timur
+const DEFAULT_LAT = -7.6643;
+const DEFAULT_LNG = 111.2872;
+
 interface CachedPrayerTimes {
   data: { name: string; time: string }[];
   fetchedAt: number;
@@ -28,8 +32,9 @@ setInterval(() => {
 
 publicRoutes.get('/prayer-times', async (c) => {
   try {
-    const city = c.req.query('city') ?? 'Magetan';
-    const cacheKey = city.toLowerCase();
+    const lat = c.req.query('lat') ?? String(DEFAULT_LAT);
+    const lng = c.req.query('lng') ?? String(DEFAULT_LNG);
+    const cacheKey = `${lat},${lng}`;
     const now = Date.now();
 
     // Check cache
@@ -38,8 +43,9 @@ publicRoutes.get('/prayer-times', async (c) => {
       return c.json({ success: true, data: cached.data });
     }
 
+    // Method 11 = Kemenag (Kementerian Agama Republik Indonesia)
     const response = await fetch(
-      `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=Indonesia&method=2`
+      `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11`
     );
 
     if (!response.ok) throw new Error('Gagal mengambil jadwal sholat');
