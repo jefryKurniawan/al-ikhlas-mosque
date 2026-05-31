@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { randomBytes } from 'node:crypto';
 import db, { pool } from './index.js';
 import { users } from './schema.js';
 import { generateId } from '../lib/auth.js';
@@ -16,13 +17,16 @@ async function seed() {
     // ============================================================
     const adminId = generateId();
     const bendaharaId = generateId();
-    const passwordHash = await hashPassword('admin123');
+    // Generate a strong random password (16 chars, alphanumeric)
+    const seedPassword = randomBytes(12).toString('base64url').slice(0, 16);
+    const passwordHash = await hashPassword(seedPassword);
 
     await db.insert(users).values([
       { id: adminId, username: 'admin', email: 'admin@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
       { id: bendaharaId, username: 'bendahara', email: 'bendahara@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
     ]).onDuplicateKeyUpdate({ set: { id: sql`id` } });
-    console.log('Users: admin, bendahara (password: admin123)');
+    console.log(`Users: admin, bendahara (password: ${seedPassword})`);
+    console.log('⚠️  Simpan password ini! Tidak akan ditampilkan lagi.');
 
     // ============================================================
     // 2. TRANSACTIONS — Jimpitan (bulanan per RT)

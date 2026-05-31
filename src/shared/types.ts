@@ -93,6 +93,20 @@ export interface User {
   createdAt: string;
 }
 
+export interface CreateUserInput {
+  username: string;
+  email: string;
+  password: string;
+  role?: 'admin';
+}
+
+export interface UpdateUserInput {
+  username?: string;
+  email?: string;
+  password?: string;
+  role?: 'admin';
+}
+
 // --- API Response Types ---
 export interface ApiResponse<T> {
   success: true;

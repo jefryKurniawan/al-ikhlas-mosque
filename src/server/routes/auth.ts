@@ -1,28 +1,33 @@
 import { Hono } from 'hono';
+import type { Env } from 'hono';
+
+type AppEnv = Env & { Variables: { body: Record<string, unknown> } };
 import { eq, and } from 'drizzle-orm';
 import { lucia } from '../lib/auth.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { isStrongPassword } from '../lib/sanitize.js';
 import { rateLimit } from '../middleware/rate-limiter.js';
+import { sanitizeMiddleware } from '../middleware/validate.js';
 import db from '../db/index.js';
 import { users } from '../db/schema.js';
 import type { User } from '../../shared/types.js';
 import { toUserId } from '../../shared/types.js';
 
-const authRoutes = new Hono();
+const authRoutes = new Hono<AppEnv>();
 
 // Rate limit: 5 attempts per 15 minutes on login
 authRoutes.use('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }));
 
 // --- Login with username/password ---
-authRoutes.post('/login', async (c) => {
-  const body = await c.req.json().catch(() => null);
+authRoutes.post('/login', sanitizeMiddleware, async (c) => {
+  const body = c.get('body') as Record<string, unknown> | undefined;
 
-  if (!body?.username || !body?.password) {
+  if (!body?.['username'] || !body?.['password']) {
     return c.json({ success: false, error: 'Username dan password wajib diisi' }, 400);
   }
 
-  const { username, password } = body as { username: string; password: string };
+  const username = body['username'] as string;
+  const password = body['password'] as string;
 
   if (!isStrongPassword(password)) {
     return c.json({ success: false, error: 'Password minimal 8 karakter, harus ada huruf dan angka' }, 400);
@@ -51,8 +56,7 @@ authRoutes.post('/login', async (c) => {
   return c.json({
     success: true,
     data: {
-      userId: row.id,
-      username: row.username,
+      userId: row.id,username: row.username,
       role: row.role,
     },
   });

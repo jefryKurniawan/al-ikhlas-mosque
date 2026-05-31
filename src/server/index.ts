@@ -5,6 +5,7 @@ import { logger } from 'hono/logger';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { securityHeaders } from './middleware/security-headers.js';
+import { csrfProtection, csrfTokenRoute } from './middleware/csrf.js';
 import publicRoutes from './routes/public.js';
 import authRoutes from './routes/auth.js';
 import oauthRoutes from './routes/oauth.js';
@@ -19,6 +20,20 @@ app.use('/api/*', cors({
   origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:5173',
   credentials: true,
 }));
+
+// --- CSRF Token Endpoint (for SPA to fetch token) ---
+app.get('/api/csrf-token', csrfTokenRoute);
+
+// --- CSRF Protection (applied before routes, skips OAuth callbacks) ---
+app.use('/api/*', async (c, next) => {
+  // Skip CSRF for OAuth callbacks (external redirects can't carry CSRF cookies)
+  const path = c.req.path;
+  if (path.includes('/callback')) {
+    await next();
+    return;
+  }
+  return csrfProtection(c, next);
+});
 
 // --- API Routes ---
 app.route('/api', publicRoutes);

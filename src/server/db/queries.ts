@@ -1,6 +1,7 @@
 import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
+import type { ResultSetHeader } from 'mysql2/promise';
 import db from './index.js';
-import { transactions, qurbanTiers, activities } from './schema.js';
+import { transactions, qurbanTiers, activities, users } from './schema.js';
 import type {
   Transaction,
   CreateTransactionInput,
@@ -9,9 +10,14 @@ import type {
   CreateQurbanTierInput,
   Activity,
   CreateActivityInput,
+  User,
+  CreateUserInput,
+  UpdateUserInput,
   PaginatedResponse,
 } from '../../shared/types.js';
-import { toTransactionId, toQurbanTierId, toActivityId } from '../../shared/types.js';
+import { toTransactionId, toQurbanTierId, toActivityId, toUserId } from '../../shared/types.js';
+import { generateId } from '../lib/auth.js';
+import { hashPassword } from '../lib/password.js';
 
 // --- Helpers ---
 
@@ -140,7 +146,8 @@ export async function updateTransaction(id: number, input: UpdateTransactionInpu
 
 export async function deleteTransaction(id: number): Promise<boolean> {
   const result = await db.delete(transactions).where(eq(transactions.id, id));
-  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
+  const header = result[0] as ResultSetHeader;
+  return header.affectedRows > 0;
 }
 
 // --- Qurban Tiers ---
@@ -212,7 +219,8 @@ export async function updateQurbanTier(id: number, input: Partial<CreateQurbanTi
 
 export async function deleteQurbanTier(id: number): Promise<boolean> {
   const result = await db.delete(qurbanTiers).where(eq(qurbanTiers.id, id));
-  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
+  const header = result[0] as ResultSetHeader;
+  return header.affectedRows > 0;
 }
 
 // --- Activities ---
@@ -282,7 +290,8 @@ export async function updateActivity(id: number, input: Partial<CreateActivityIn
 
 export async function deleteActivity(id: number): Promise<boolean> {
   const result = await db.delete(activities).where(eq(activities.id, id));
-  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
+  const header = result[0] as ResultSetHeader;
+  return header.affectedRows > 0;
 }
 
 // --- Reports ---
@@ -362,4 +371,88 @@ export async function getReportSummary(
     pengeluaranPerKategori,
     saldo: totalPemasukan - (pengeluaranResult?.total ?? 0),
   };
+}
+
+// --- Users ---
+
+function asUser(row: typeof users.$inferSelect): User {
+  return {
+    id: toUserId(row.id),
+    username: row.username,
+    email: row.email,
+    passwordHash: row.passwordHash,
+    provider: row.provider as User['provider'],
+    providerId: row.providerId,
+    role: row.role as User['role'],
+    createdAt: typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString(),
+  };
+}
+
+export async function getUsers(
+  page: number = 1,
+  limit: number = 20
+): Promise<PaginatedResponse<User>> {
+  const offset = (page - 1) * limit;
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users);
+
+  const rows = await db
+    .select()
+    .from(users)
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    data: rows.map(asUser),
+    total: countResult?.count ?? 0,
+    page,
+    limit,
+  };
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  const [row] = await db.select().from(users).where(eq(users.id, id));
+  return row ? asUser(row) : null;
+}
+
+export async function createUser(input: CreateUserInput): Promise<User> {
+  const id = generateId();
+  const passwordHash = await hashPassword(input.password);
+
+  await db.insert(users).values({
+    id,
+    username: input.username,
+    email: input.email,
+    passwordHash,
+    provider: 'credentials',
+    role: input.role ?? 'admin',
+  });
+
+  const created = await getUserById(id);
+  return created!;
+}
+
+export async function updateUser(id: string, input: UpdateUserInput): Promise<User | null> {
+  const values: Record<string, unknown> = {};
+
+  if (input.username !== undefined) values.username = input.username;
+  if (input.email !== undefined) values.email = input.email;
+  if (input.role !== undefined) values.role = input.role;
+  if (input.password !== undefined) values.passwordHash = await hashPassword(input.password);
+
+  if (Object.keys(values).length === 0) {
+    return getUserById(id);
+  }
+
+  await db.update(users).set(values).where(eq(users.id, id));
+  return getUserById(id);
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  const result = await db.delete(users).where(eq(users.id, id));
+  const header = result[0] as ResultSetHeader;
+  return header.affectedRows > 0;
 }

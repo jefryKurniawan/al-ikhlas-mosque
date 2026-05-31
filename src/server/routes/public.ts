@@ -1,14 +1,43 @@
 import { Hono } from 'hono';
+import type { Env } from 'hono';
+
+type AppEnv = Env & { Variables: { body: Record<string, unknown> } };
 import { getQurbanTiers, getActivities, getReportSummary, getTransactions } from '../db/queries.js';
 import { generateCsv, generateReportHtml } from '../lib/export.js';
 import { getDateRange } from '../../shared/date-range.js';
+import { validateBody, reportSchema } from '../middleware/validate.js';
 
-const publicRoutes = new Hono();
+const publicRoutes = new Hono<AppEnv>();
 
-// --- Prayer Times (proxy to Aladhan API) ---
+// --- Prayer Times (proxy to Aladhan API, 1-hour cache) ---
+interface CachedPrayerTimes {
+  data: { name: string; time: string }[];
+  fetchedAt: number;
+}
+
+const prayerCache = new Map<string, CachedPrayerTimes>();
+const PRAYER_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+// Cleanup expired cache entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of prayerCache) {
+    if (now - entry.fetchedAt > PRAYER_CACHE_TTL) prayerCache.delete(key);
+  }
+}, 10 * 60 * 1000);
+
 publicRoutes.get('/prayer-times', async (c) => {
   try {
     const city = c.req.query('city') ?? 'Magetan';
+    const cacheKey = city.toLowerCase();
+    const now = Date.now();
+
+    // Check cache
+    const cached = prayerCache.get(cacheKey);
+    if (cached && now - cached.fetchedAt < PRAYER_CACHE_TTL) {
+      return c.json({ success: true, data: cached.data });
+    }
+
     const response = await fetch(
       `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=Indonesia&method=2`
     );
@@ -26,6 +55,9 @@ publicRoutes.get('/prayer-times', async (c) => {
       { name: 'Maghrib', time: timings['Maghrib'] ?? '-' },
       { name: 'Isya', time: timings['Isha'] ?? '-' },
     ];
+
+    // Update cache
+    prayerCache.set(cacheKey, { data: prayerTimes, fetchedAt: now });
 
     return c.json({ success: true, data: prayerTimes });
   } catch (err) {
@@ -50,12 +82,8 @@ publicRoutes.get('/activities', async (c) => {
 });
 
 // --- Public Report (anonymous, no donor names) ---
-publicRoutes.post('/reports', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body?.type || !body?.year) {
-    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
-  }
-
+publicRoutes.post('/reports', validateBody(reportSchema), async (c) => {
+  const body = c.get('body') as { type: string; year: number; month?: number };
   const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
   const summary = await getReportSummary(startDate, endDate);
 
@@ -69,12 +97,8 @@ publicRoutes.post('/reports', async (c) => {
 });
 
 // --- Public CSV Export (anonymous) ---
-publicRoutes.post('/reports/csv', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body?.type || !body?.year) {
-    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
-  }
-
+publicRoutes.post('/reports/csv', validateBody(reportSchema), async (c) => {
+  const body = c.get('body') as { type: string; year: number; month?: number };
   const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
   const transactions = await getTransactions(1, 10000, undefined, startDate, endDate);
   const csv = generateCsv(transactions.data, false); // false = no donor names
@@ -85,12 +109,8 @@ publicRoutes.post('/reports/csv', async (c) => {
 });
 
 // --- Public HTML/PDF Export (anonymous) ---
-publicRoutes.post('/reports/pdf', async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!body?.type || !body?.year) {
-    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
-  }
-
+publicRoutes.post('/reports/pdf', validateBody(reportSchema), async (c) => {
+  const body = c.get('body') as { type: string; year: number; month?: number };
   const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
   const summary = await getReportSummary(startDate, endDate);
 
