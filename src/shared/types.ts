@@ -132,6 +132,7 @@ export interface ReportQuery {
 export interface ReportSummary {
   pemasukan: Record<TransactionType, number>;
   pengeluaran: number;
+  pengeluaran_per_kategori: Record<string, number>;
   saldo: number;
   periode: string;
   transactions?: Transaction[];

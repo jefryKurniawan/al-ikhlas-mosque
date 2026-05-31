@@ -6,16 +6,18 @@ import {
   createTransaction,
   updateTransaction,
   deleteTransaction,
-  getQurbanTiers,
+  getQurbanTiersPaginated,
   createQurbanTier,
   updateQurbanTier,
   deleteQurbanTier,
-  getActivities,
+  getActivitiesPaginated,
   createActivity,
   updateActivity,
   deleteActivity,
   getReportSummary,
 } from '../db/queries.js';
+import { generateCsv, generateReportHtml } from '../lib/export.js';
+import { getDateRange } from '../../shared/date-range.js';
 
 const adminRoutes = new Hono();
 
@@ -49,21 +51,29 @@ adminRoutes.post(
   }
 );
 
-adminRoutes.put('/transactions/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (isNaN(id)) {
-    return c.json({ success: false, error: 'ID tidak valid' }, 400);
+adminRoutes.put(
+  '/transactions/:id',
+  validateBody({
+    type: { type: 'string', required: false, enum: ['jimpitan', 'hibah', 'zakat', 'sedekah', 'pengeluaran'] },
+    amount: { type: 'number', required: false, min: 1 },
+    date: { type: 'string', required: false },
+  }),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    if (isNaN(id)) {
+      return c.json({ success: false, error: 'ID tidak valid' }, 400);
+    }
+
+    const body = await c.req.json();
+    const transaction = await updateTransaction(id, body);
+
+    if (!transaction) {
+      return c.json({ success: false, error: 'Transaksi tidak ditemukan' }, 404);
+    }
+
+    return c.json({ success: true, data: transaction });
   }
-
-  const body = await c.req.json();
-  const transaction = await updateTransaction(id, body);
-
-  if (!transaction) {
-    return c.json({ success: false, error: 'Transaksi tidak ditemukan' }, 404);
-  }
-
-  return c.json({ success: true, data: transaction });
-});
+);
 
 adminRoutes.delete('/transactions/:id', async (c) => {
   const id = Number(c.req.param('id'));
@@ -82,8 +92,10 @@ adminRoutes.delete('/transactions/:id', async (c) => {
 // --- Qurban Tiers CRUD ---
 
 adminRoutes.get('/cms/qurban', async (c) => {
-  const tiers = await getQurbanTiers(false);
-  return c.json({ success: true, data: tiers });
+  const page = Number(c.req.query('page') ?? '1');
+  const limit = Number(c.req.query('limit') ?? '20');
+  const result = await getQurbanTiersPaginated(page, limit, false);
+  return c.json({ success: true, data: result });
 });
 
 adminRoutes.post(
@@ -99,14 +111,22 @@ adminRoutes.post(
   }
 );
 
-adminRoutes.put('/cms/qurban/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (isNaN(id)) {
-    return c.json({ success: false, error: 'ID tidak valid' }, 400);
-  }
+adminRoutes.put(
+  '/cms/qurban/:id',
+  validateBody({
+    name: { type: 'string', required: false },
+    amount: { type: 'number', required: false, min: 1 },
+    description: { type: 'string', required: false },
+    sort_order: { type: 'number', required: false },
+  }),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    if (isNaN(id)) {
+      return c.json({ success: false, error: 'ID tidak valid' }, 400);
+    }
 
-  const body = await c.req.json();
-  const tier = await updateQurbanTier(id, body);
+    const body = await c.req.json();
+    const tier = await updateQurbanTier(id, body);
 
   if (!tier) {
     return c.json({ success: false, error: 'Tier tidak ditemukan' }, 404);
@@ -132,8 +152,10 @@ adminRoutes.delete('/cms/qurban/:id', async (c) => {
 // --- Activities CRUD ---
 
 adminRoutes.get('/cms/activities', async (c) => {
-  const activities = await getActivities(false);
-  return c.json({ success: true, data: activities });
+  const page = Number(c.req.query('page') ?? '1');
+  const limit = Number(c.req.query('limit') ?? '20');
+  const result = await getActivitiesPaginated(page, limit, false);
+  return c.json({ success: true, data: result });
 });
 
 adminRoutes.post(
@@ -149,21 +171,29 @@ adminRoutes.post(
   }
 );
 
-adminRoutes.put('/cms/activities/:id', async (c) => {
-  const id = Number(c.req.param('id'));
-  if (isNaN(id)) {
-    return c.json({ success: false, error: 'ID tidak valid' }, 400);
+adminRoutes.put(
+  '/cms/activities/:id',
+  validateBody({
+    title: { type: 'string', required: false },
+    event_date: { type: 'string', required: false },
+    description: { type: 'string', required: false },
+  }),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    if (isNaN(id)) {
+      return c.json({ success: false, error: 'ID tidak valid' }, 400);
+    }
+
+    const body = await c.req.json();
+    const activity = await updateActivity(id, body);
+
+    if (!activity) {
+      return c.json({ success: false, error: 'Kegiatan tidak ditemukan' }, 404);
+    }
+
+    return c.json({ success: true, data: activity });
   }
-
-  const body = await c.req.json();
-  const activity = await updateActivity(id, body);
-
-  if (!activity) {
-    return c.json({ success: false, error: 'Kegiatan tidak ditemukan' }, 404);
-  }
-
-  return c.json({ success: true, data: activity });
-});
+);
 
 adminRoutes.delete('/cms/activities/:id', async (c) => {
   const id = Number(c.req.param('id'));
@@ -203,25 +233,57 @@ adminRoutes.post('/reports', async (c) => {
   });
 });
 
-function getDateRange(type: string, year: number, month?: number): { startDate: string; endDate: string } {
-  const pad = (n: number) => String(n).padStart(2, '0');
-
-  switch (type) {
-    case 'bulanan': {
-      const m = month ?? new Date().getMonth() + 1;
-      return { startDate: `${year}-${pad(m)}-01`, endDate: `${year}-${pad(m)}-31` };
-    }
-    case 'tahunan':
-      return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
-    case 'setelah_idul_adha':
-      return { startDate: `${year}-06-17`, endDate: `${year}-07-17` };
-    case 'setelah_idul_fitri':
-      return { startDate: `${year}-04-10`, endDate: `${year}-05-10` };
-    case 'sebelum_ramadhan':
-      return { startDate: `${year}-02-01`, endDate: `${year}-02-28` };
-    default:
-      return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+// --- Export CSV (internal, with donor names) ---
+adminRoutes.post('/reports/csv', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.type || !body?.year) {
+    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
   }
-}
+
+  const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
+  const transactions = await getTransactions(1, 10000, undefined, startDate, endDate);
+  const csv = generateCsv(transactions.data, true);
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-internal-${body.type}-${body.year}.csv"`);
+  return c.body(csv);
+});
+
+// --- Export HTML/PDF (internal, with donor names) ---
+adminRoutes.post('/reports/pdf', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.type || !body?.year) {
+    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
+  }
+
+  const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
+  const summary = await getReportSummary(startDate, endDate);
+  const transactions = await getTransactions(1, 1000, undefined, startDate, endDate);
+
+  const html = generateReportHtml(
+    'Laporan Keuangan Internal — Masjid Al Ikhlas',
+    `${startDate} s/d ${endDate}`,
+    summary,
+    transactions.data,
+    true
+  );
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
+// --- Export CSV raw data ---
+adminRoutes.get('/export/csv', async (c) => {
+  const type = c.req.query('type');
+  const startDate = c.req.query('start_date');
+  const endDate = c.req.query('end_date');
+
+  const transactions = await getTransactions(1, 10000, type ?? undefined, startDate ?? undefined, endDate ?? undefined);
+  const csv = generateCsv(transactions.data, true);
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="data-transaksi-${new Date().toISOString().split('T')[0]}.csv"`);
+  return c.body(csv);
+});
 
 export default adminRoutes;

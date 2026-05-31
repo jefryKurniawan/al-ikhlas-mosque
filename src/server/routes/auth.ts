@@ -1,10 +1,15 @@
 import { Hono } from 'hono';
 import { lucia, generateId } from '../lib/auth.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
+import { isStrongPassword } from '../lib/sanitize.js';
+import { rateLimit } from '../middleware/rate-limiter.js';
 import pool from '../db/connection.js';
 import type { User } from '../../shared/types.js';
 
 const authRoutes = new Hono();
+
+// Rate limit: 5 attempts per 15 minutes on login
+authRoutes.use('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }));
 
 // --- Login with username/password ---
 authRoutes.post('/login', async (c) => {
@@ -15,6 +20,10 @@ authRoutes.post('/login', async (c) => {
   }
 
   const { username, password } = body as { username: string; password: string };
+
+  if (!isStrongPassword(password)) {
+    return c.json({ success: false, error: 'Password minimal 8 karakter, harus ada huruf dan angka' }, 400);
+  }
 
   // Find user by username
   const [rows] = await pool.execute(

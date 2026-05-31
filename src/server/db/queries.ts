@@ -107,6 +107,25 @@ export async function getQurbanTiers(activeOnly: boolean = false): Promise<Qurba
   return rows as QurbanTier[];
 }
 
+export async function getQurbanTiersPaginated(
+  page: number = 1,
+  limit: number = 20,
+  activeOnly: boolean = false
+): Promise<PaginatedResponse<QurbanTier>> {
+  const offset = (page - 1) * limit;
+  const where = activeOnly ? 'WHERE is_active = true' : '';
+
+  const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM qurban_tiers ${where}`);
+  const total = (countRows as Record<string, unknown>[])[0]?.['total'] as number;
+
+  const [rows] = await pool.execute(
+    `SELECT * FROM qurban_tiers ${where} ORDER BY sort_order LIMIT ? OFFSET ?`,
+    [limit, offset]
+  );
+
+  return { data: rows as QurbanTier[], total, page, limit };
+}
+
 export async function createQurbanTier(input: CreateQurbanTierInput): Promise<QurbanTier> {
   const [result] = await pool.execute(
     `INSERT INTO qurban_tiers (name, amount, description, sort_order) VALUES (?, ?, ?, ?)`,
@@ -154,6 +173,25 @@ export async function getActivities(activeOnly: boolean = false): Promise<Activi
   return rows as Activity[];
 }
 
+export async function getActivitiesPaginated(
+  page: number = 1,
+  limit: number = 20,
+  activeOnly: boolean = false
+): Promise<PaginatedResponse<Activity>> {
+  const offset = (page - 1) * limit;
+  const where = activeOnly ? 'WHERE is_active = true' : '';
+
+  const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM activities ${where}`);
+  const total = (countRows as Record<string, unknown>[])[0]?.['total'] as number;
+
+  const [rows] = await pool.execute(
+    `SELECT * FROM activities ${where} ORDER BY event_date DESC LIMIT ? OFFSET ?`,
+    [limit, offset]
+  );
+
+  return { data: rows as Activity[], total, page, limit };
+}
+
 export async function createActivity(input: CreateActivityInput): Promise<Activity> {
   const [result] = await pool.execute(
     `INSERT INTO activities (title, event_date, description) VALUES (?, ?, ?)`,
@@ -198,6 +236,7 @@ export async function getReportSummary(
 ): Promise<{
   pemasukan: Record<string, number>;
   pengeluaran: number;
+  pengeluaran_per_kategori: Record<string, number>;
   saldo: number;
 }> {
   const [pemasukanRows] = await pool.execute(
@@ -218,6 +257,7 @@ export async function getReportSummary(
     pemasukan[row['type'] as string] = row['total'] as number;
   }
 
+  // Pengeluaran total + breakdown per kategori
   const [pengeluaranRows] = await pool.execute(
     `SELECT COALESCE(SUM(amount), 0) as total
      FROM transactions
@@ -226,11 +266,29 @@ export async function getReportSummary(
   );
   const pengeluaran = (pengeluaranRows as Record<string, unknown>[])[0]?.['total'] as number;
 
+  const [kategoriRows] = await pool.execute(
+    `SELECT category, COALESCE(SUM(amount), 0) as total
+     FROM transactions
+     WHERE type = 'pengeluaran' AND date BETWEEN ? AND ?
+     GROUP BY category`,
+    [startDate, endDate]
+  );
+  const pengeluaran_per_kategori: Record<string, number> = {
+    operasional: 0,
+    perawatan: 0,
+    sosial: 0,
+  };
+  for (const row of kategoriRows as Record<string, unknown>[]) {
+    const cat = (row['category'] as string) ?? 'lainnya';
+    pengeluaran_per_kategori[cat] = row['total'] as number;
+  }
+
   const totalPemasukan = Object.values(pemasukan).reduce((a, b) => a + b, 0);
 
   return {
     pemasukan,
     pengeluaran,
+    pengeluaran_per_kategori,
     saldo: totalPemasukan - pengeluaran,
   };
 }

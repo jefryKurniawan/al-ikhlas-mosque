@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
-import { getQurbanTiers, getActivities, getReportSummary } from '../db/queries.js';
+import { getQurbanTiers, getActivities, getReportSummary, getTransactions } from '../db/queries.js';
+import { generateCsv, generateReportHtml } from '../lib/export.js';
+import { getDateRange } from '../../shared/date-range.js';
 
 const publicRoutes = new Hono();
 
@@ -66,33 +68,43 @@ publicRoutes.post('/reports', async (c) => {
   });
 });
 
-// --- Helper: date range from report type ---
-function getDateRange(
-  type: string,
-  year: number,
-  month?: number
-): { startDate: string; endDate: string } {
-  const pad = (n: number) => String(n).padStart(2, '0');
-
-  switch (type) {
-    case 'bulanan': {
-      const m = month ?? new Date().getMonth() + 1;
-      return {
-        startDate: `${year}-${pad(m)}-01`,
-        endDate: `${year}-${pad(m)}-31`,
-      };
-    }
-    case 'tahunan':
-      return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
-    case 'setelah_idul_adha':
-      return { startDate: `${year}-06-17`, endDate: `${year}-07-17` };
-    case 'setelah_idul_fitri':
-      return { startDate: `${year}-04-10`, endDate: `${year}-05-10` };
-    case 'sebelum_ramadhan':
-      return { startDate: `${year}-02-01`, endDate: `${year}-02-28` };
-    default:
-      return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+// --- Public CSV Export (anonymous) ---
+publicRoutes.post('/reports/csv', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.type || !body?.year) {
+    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
   }
-}
+
+  const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
+  const transactions = await getTransactions(1, 10000, undefined, startDate, endDate);
+  const csv = generateCsv(transactions.data, false); // false = no donor names
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-publik-${body.type}-${body.year}.csv"`);
+  return c.body(csv);
+});
+
+// --- Public HTML/PDF Export (anonymous) ---
+publicRoutes.post('/reports/pdf', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.type || !body?.year) {
+    return c.json({ success: false, error: 'type dan year wajib diisi' }, 400);
+  }
+
+  const { startDate, endDate } = getDateRange(body.type, body.year, body.month);
+  const summary = await getReportSummary(startDate, endDate);
+
+  const html = generateReportHtml(
+    'Laporan Keuangan Publik — Masjid Al Ikhlas',
+    `${startDate} s/d ${endDate}`,
+    summary,
+    undefined, // no transaction details for public
+    false // no donor names
+  );
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
 
 export default publicRoutes;

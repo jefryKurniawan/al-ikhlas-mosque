@@ -4,14 +4,17 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
+import { securityHeaders } from './middleware/security-headers.js';
 import publicRoutes from './routes/public.js';
 import authRoutes from './routes/auth.js';
+import oauthRoutes from './routes/oauth.js';
 import adminRoutes from './routes/admin.js';
 
 const app = new Hono();
 
 // --- Global Middleware ---
 app.use('*', logger());
+app.use('*', securityHeaders);
 app.use('/api/*', cors({
   origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:5173',
   credentials: true,
@@ -20,6 +23,7 @@ app.use('/api/*', cors({
 // --- API Routes ---
 app.route('/api', publicRoutes);
 app.route('/api', authRoutes);
+app.route('/api', oauthRoutes);
 app.route('/api/admin', adminRoutes);
 
 // --- Health Check ---
@@ -37,6 +41,20 @@ app.onError(errorHandler);
 // --- Start Server ---
 const port = Number(process.env['PORT'] ?? 3000);
 
-serve({ fetch: app.fetch, port }, (info) => {
+const server = serve({ fetch: app.fetch, port }, (info) => {
   console.log(`🕌 Al Ikhlas Mosque server running on http://localhost:${info.port}`);
 });
+
+// --- Graceful Shutdown ---
+function shutdown(signal: string) {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('Server closed.');
+    process.exit(0);
+  });
+  // Force exit after 10s
+  setTimeout(() => process.exit(1), 10_000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
