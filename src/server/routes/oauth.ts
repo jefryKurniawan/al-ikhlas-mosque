@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
 import { lucia, generateId } from '../lib/auth.js';
-import pool from '../db/connection.js';
+import db from '../db/index.js';
+import { users } from '../db/schema.js';
 import type { User } from '../../shared/types.js';
 
 const oauthRoutes = new Hono();
@@ -186,40 +188,65 @@ async function findOrCreateOAuthUser(
   name: string | null
 ): Promise<User> {
   // Find existing user by provider + provider_id
-  const [rows] = await pool.execute(
-    'SELECT * FROM users WHERE provider = ? AND provider_id = ?',
-    [provider, providerId]
-  );
-  const existing = (rows as User[])[0];
-  if (existing) return existing;
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.providerId, providerId));
+
+  if (existing) {
+    return {
+      id: existing.id as User['id'],
+      username: existing.username,
+      email: existing.email,
+      passwordHash: existing.passwordHash,
+      provider: existing.provider as User['provider'],
+      providerId: existing.providerId,
+      role: existing.role as User['role'],
+      createdAt: String(existing.createdAt),
+    };
+  }
 
   // Find by email (link accounts)
   if (email) {
-    const [emailRows] = await pool.execute(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
-    const byEmail = (emailRows as User[])[0];
+    const [byEmail] = await db.select().from(users).where(eq(users.email, email));
     if (byEmail) {
       // Link OAuth to existing account
-      await pool.execute(
-        'UPDATE users SET provider = ?, provider_id = ? WHERE id = ?',
-        [provider, providerId, byEmail.id]
-      );
-      return { ...byEmail, provider, provider_id: providerId };
+      await db.update(users).set({ provider, providerId }).where(eq(users.id, byEmail.id));
+      return {
+        id: byEmail.id as User['id'],
+        username: byEmail.username,
+        email: byEmail.email,
+        passwordHash: byEmail.passwordHash,
+        provider,
+        providerId,
+        role: byEmail.role as User['role'],
+        createdAt: String(byEmail.createdAt),
+      };
     }
   }
 
   // Create new user
   const userId = generateId();
-  await pool.execute(
-    `INSERT INTO users (id, username, email, provider, provider_id, role)
-     VALUES (?, ?, ?, ?, ?, 'admin')`,
-    [userId, name ?? email?.split('@')[0] ?? userId.slice(0, 8), email, provider, providerId]
-  );
+  await db.insert(users).values({
+    id: userId,
+    username: name ?? email?.split('@')[0] ?? userId.slice(0, 8),
+    email,
+    provider,
+    providerId,
+    role: 'admin',
+  });
 
-  const [newRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
-  return (newRows as User[])[0]!;
+  const [newRow] = await db.select().from(users).where(eq(users.id, userId));
+  return {
+    id: newRow!.id as User['id'],
+    username: newRow!.username,
+    email: newRow!.email,
+    passwordHash: newRow!.passwordHash,
+    provider: newRow!.provider as User['provider'],
+    providerId: newRow!.providerId,
+    role: newRow!.role as User['role'],
+    createdAt: String(newRow!.createdAt),
+  };
 }
 
 async function createSessionAndRedirect(c: { header: (name: string, value: string) => void }, user: User): Promise<void> {

@@ -18,7 +18,7 @@ export function generateCsv(transactions: Transaction[], includeDonor: boolean =
       t.category ?? '',
     ];
     if (includeDonor) {
-      base.splice(4, 0, t.donor_name ?? '');
+      base.splice(4, 0, t.donorName ?? '');
     }
     return base.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
   });
@@ -35,7 +35,7 @@ export function generateReportHtml(
   summary: {
     pemasukan: Record<string, number>;
     pengeluaran: number;
-    pengeluaran_per_kategori: Record<string, number>;
+    pengeluaranPerKategori: Record<string, number>;
     saldo: number;
   },
   transactions?: Transaction[],
@@ -79,7 +79,7 @@ export function generateReportHtml(
   <h2>Pengeluaran</h2>
   <table>
     <tr><th>Kategori</th><th class="amount">Jumlah</th></tr>
-    ${Object.entries(summary.pengeluaran_per_kategori).map(([k, v]) =>
+    ${Object.entries(summary.pengeluaranPerKategori).map(([k, v]) =>
       `<tr><td>${k.charAt(0).toUpperCase() + k.slice(1)}</td><td class="amount">${fmt(v)}</td></tr>`
     ).join('')}
     <tr class="summary-row"><td>Total Pengeluaran</td><td class="amount">${fmt(summary.pengeluaran)}</td></tr>
@@ -101,7 +101,7 @@ export function generateReportHtml(
     <tr>
       <td>${t.date}</td>
       <td>${t.type}</td>
-      ${includeDonor ? `<td>${t.donor_name ?? '-'}</td>` : ''}
+      ${includeDonor ? `<td>${t.donorName ?? '-'}</td>` : ''}
       <td>${t.description ?? '-'}</td>
       <td class="amount">${fmt(t.amount)}</td>
     </tr>`).join('')}

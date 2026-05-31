@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pool from './connection.js';
+import { pool } from './index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

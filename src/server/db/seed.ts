@@ -1,7 +1,9 @@
 import 'dotenv/config';
-import pool from './connection.js';
+import db, { pool } from './index.js';
+import { users } from './schema.js';
 import { generateId } from '../lib/auth.js';
 import { hashPassword } from '../lib/password.js';
+import { eq, sql } from 'drizzle-orm';
 
 async function seed() {
   console.log('Seeding database...');
@@ -16,22 +18,16 @@ async function seed() {
     const bendaharaId = generateId();
     const passwordHash = await hashPassword('admin123');
 
-    await conn.execute(
-      `INSERT IGNORE INTO users (id, username, email, password_hash, provider, role)
-       VALUES (?, ?, ?, ?, 'credentials', 'admin')`,
-      [adminId, 'admin', 'admin@masjidalikhlas.id', passwordHash]
-    );
-    await conn.execute(
-      `INSERT IGNORE INTO users (id, username, email, password_hash, provider, role)
-       VALUES (?, ?, ?, ?, 'credentials', 'admin')`,
-      [bendaharaId, 'bendahara', 'bendahara@masjidalikhlas.id', passwordHash]
-    );
+    await db.insert(users).values([
+      { id: adminId, username: 'admin', email: 'admin@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
+      { id: bendaharaId, username: 'bendahara', email: 'bendahara@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
+    ]).onDuplicateKeyUpdate({ set: { id: sql`id` } });
     console.log('Users: admin, bendahara (password: admin123)');
 
     // ============================================================
     // 2. TRANSACTIONS — Jimpitan (bulanan per RT)
     // ============================================================
-    const jimpitan = [
+    const jimpitan: [string, number, string][] = [
       ['2026-01-15', 350000, 'Jimpitan RT 01 Januari'],
       ['2026-01-15', 275000, 'Jimpitan RT 02 Januari'],
       ['2026-01-15', 420000, 'Jimpitan RT 03 Januari'],
@@ -47,12 +43,12 @@ async function seed() {
       ['2026-05-15', 390000, 'Jimpitan RT 01 Mei'],
       ['2026-05-15', 300000, 'Jimpitan RT 02 Mei'],
       ['2026-05-15', 450000, 'Jimpitan RT 03 Mei'],
-    ] as const;
+    ];
 
-    for (const [date, amount, desc] of jimpitan) {
+    for (const [date, amount, description] of jimpitan) {
       await conn.execute(
-        `INSERT INTO transactions (type, amount, date, description) VALUES ('jimpitan', ?, ?, ?)`,
-        [amount, date, desc]
+        'INSERT INTO transactions (type, amount, date, description) VALUES (?, ?, ?, ?)',
+        ['jimpitan', amount, date, description]
       );
     }
     console.log(`Jimpitan: ${jimpitan.length} records`);
@@ -60,18 +56,18 @@ async function seed() {
     // ============================================================
     // 3. TRANSACTIONS — Hibah
     // ============================================================
-    const hibah = [
+    const hibah: [string, number, string, string][] = [
       ['2026-01-10', 5000000, 'Hibah renovasi masjid', 'Bpk. Suharto'],
       ['2026-02-20', 2500000, 'Hibah umum', 'Ibu Ratna Dewi'],
       ['2026-03-05', 10000000, 'Hibah dari perusahaan', 'PT. Sejahtera Abadi'],
       ['2026-04-15', 3000000, 'Hibah untuk anak yatim', 'Bpk. Agus Widodo'],
       ['2026-05-01', 7500000, 'Hibah keluarga', 'Keluarga Bpk. Rahmat'],
-    ] as const;
+    ];
 
-    for (const [date, amount, desc, donor] of hibah) {
+    for (const [date, amount, description, donorName] of hibah) {
       await conn.execute(
-        `INSERT INTO transactions (type, amount, date, description, donor_name) VALUES ('hibah', ?, ?, ?, ?)`,
-        [amount, date, desc, donor]
+        'INSERT INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
+        ['hibah', amount, date, description, donorName]
       );
     }
     console.log(`Hibah: ${hibah.length} records`);
@@ -79,20 +75,20 @@ async function seed() {
     // ============================================================
     // 4. TRANSACTIONS — Zakat
     // ============================================================
-    const zakat = [
-      ['2026-03-25', 3500000, 'Zakat Fitrah Keluarga', 'Ahmad Karim', null],
-      ['2026-03-26', 2000000, 'Zakat Fitrah', 'Siti Aminah', null],
-      ['2026-03-27', 4500000, 'Zakat Mal', 'Hadi Prasetyo', null],
-      ['2026-03-28', 1500000, 'Zakat Fitrah Keluarga', 'Darto Susilo', null],
-      ['2026-03-29', 8000000, 'Zakat Mal', 'Lestari Wulandari', null],
-      ['2026-03-30', 2500000, 'Zakat Fitrah', 'Wahyu Nugroho', null],
-      ['2026-04-01', 6000000, 'Zakat Mal dari Pengusaha', 'CV. Berkah Jaya', null],
-    ] as const;
+    const zakat: [string, number, string, string][] = [
+      ['2026-03-25', 3500000, 'Zakat Fitrah Keluarga', 'Ahmad Karim'],
+      ['2026-03-26', 2000000, 'Zakat Fitrah', 'Siti Aminah'],
+      ['2026-03-27', 4500000, 'Zakat Mal', 'Hadi Prasetyo'],
+      ['2026-03-28', 1500000, 'Zakat Fitrah Keluarga', 'Darto Susilo'],
+      ['2026-03-29', 8000000, 'Zakat Mal', 'Lestari Wulandari'],
+      ['2026-03-30', 2500000, 'Zakat Fitrah', 'Wahyu Nugroho'],
+      ['2026-04-01', 6000000, 'Zakat Mal dari Pengusaha', 'CV. Berkah Jaya'],
+    ];
 
-    for (const [date, amount, desc, donor, cat] of zakat) {
+    for (const [date, amount, description, donorName] of zakat) {
       await conn.execute(
-        `INSERT INTO transactions (type, amount, date, description, donor_name, category) VALUES ('zakat', ?, ?, ?, ?, ?)`,
-        [amount, date, desc, donor, cat]
+        'INSERT INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
+        ['zakat', amount, date, description, donorName]
       );
     }
     console.log(`Zakat: ${zakat.length} records`);
@@ -100,7 +96,7 @@ async function seed() {
     // ============================================================
     // 5. TRANSACTIONS — Sedekah
     // ============================================================
-    const sedekah = [
+    const sedekah: [string, number, string, string | null][] = [
       ['2026-01-05', 250000, 'Sedekah Jumat', null],
       ['2026-01-12', 175000, 'Sedekah Jumat', null],
       ['2026-01-19', 300000, 'Sedekah Jumat', null],
@@ -114,12 +110,12 @@ async function seed() {
       ['2026-04-10', 750000, 'Sedekah Ramadhan', null],
       ['2026-04-17', 1200000, 'Sedekah Ramadhan', null],
       ['2026-05-05', 400000, 'Sedekah Jumat', null],
-    ] as const;
+    ];
 
-    for (const [date, amount, desc, donor] of sedekah) {
+    for (const [date, amount, description, donorName] of sedekah) {
       await conn.execute(
-        `INSERT INTO transactions (type, amount, date, description, donor_name) VALUES ('sedekah', ?, ?, ?, ?)`,
-        [amount, date, desc, donor]
+        'INSERT INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
+        ['sedekah', amount, date, description, donorName]
       );
     }
     console.log(`Sedekah: ${sedekah.length} records`);
@@ -127,7 +123,7 @@ async function seed() {
     // ============================================================
     // 6. TRANSACTIONS — Pengeluaran (per kategori)
     // ============================================================
-    const pengeluaran = [
+    const pengeluaran: [string, number, string, string][] = [
       ['2026-01-05', 500000, 'Pembelian ATK masjid', 'operasional'],
       ['2026-01-10', 1200000, 'Bayar listrik Desember', 'operasional'],
       ['2026-01-20', 350000, 'Perbaikan speaker masjid', 'perawatan'],
@@ -143,12 +139,12 @@ async function seed() {
       ['2026-05-01', 600000, 'Distribusi zakat fakir miskin', 'sosial'],
       ['2026-05-10', 1300000, 'Bayar listrik April', 'operasional'],
       ['2026-05-15', 1500000, 'Servis AC masjid', 'perawatan'],
-    ] as const;
+    ];
 
-    for (const [date, amount, desc, category] of pengeluaran) {
+    for (const [date, amount, description, category] of pengeluaran) {
       await conn.execute(
-        `INSERT INTO transactions (type, amount, date, description, category) VALUES ('pengeluaran', ?, ?, ?, ?)`,
-        [amount, date, desc, category]
+        'INSERT INTO transactions (type, amount, date, description, category) VALUES (?, ?, ?, ?, ?)',
+        ['pengeluaran', amount, date, description, category]
       );
     }
     console.log(`Pengeluaran: ${pengeluaran.length} records`);
@@ -156,7 +152,7 @@ async function seed() {
     // ============================================================
     // 7. QURBAN TIERS — Paket qurban & sedekah
     // ============================================================
-    const tiers = [
+    const tiers: [string, number, string, number][] = [
       ['Sapi 1/7', 2500000, 'Paket 1/7 bagian sapi qurban. Termasuk distribusi daging ke mustahik.', 1],
       ['Sapi 1/1 (Utuh)', 17500000, 'Paket sapi qurban utuh. Cocok untuk kelompok/RT.', 2],
       ['Kambing 1 Ekor', 2200000, 'Paket kambing qurban utuh.', 3],
@@ -165,12 +161,12 @@ async function seed() {
       ['Sedekah Yatim', 100000, 'Paket sedekah untuk anak yatim piatu.', 6],
       ['Sedekah Dhuafa', 150000, 'Paket sedekah untuk kaum dhuafa.', 7],
       ['Paket Keluarga Qurban', 5000000, 'Paket qurban keluarga (1/7 sapi + sedekah yatim + sedekah dhuafa).', 8],
-    ] as const;
+    ];
 
-    for (const [name, amount, description, sort_order] of tiers) {
+    for (const [name, amount, description, sortOrder] of tiers) {
       await conn.execute(
-        `INSERT INTO qurban_tiers (name, amount, description, sort_order) VALUES (?, ?, ?, ?)`,
-        [name, amount, description, sort_order]
+        'INSERT INTO qurban_tiers (name, amount, description, sort_order) VALUES (?, ?, ?, ?)',
+        [name, amount, description, sortOrder]
       );
     }
     console.log(`Qurban tiers: ${tiers.length} records`);
@@ -178,7 +174,7 @@ async function seed() {
     // ============================================================
     // 8. ACTIVITIES — Kegiatan masjid
     // ============================================================
-    const activities = [
+    const activitiesData: [string, string, string, boolean][] = [
       ['Sholat Jumat Berjamaah', '2026-06-05', 'Sholat Jumat dengan khotib undangan. Khotib: Ust. Ahmad Fauzi.', true],
       ['Pengajian Rutin Sabtu Malam', '2026-06-07', 'Pengajian rutin Sabtu malam minggu pertama. Kitab: Riyadhus Shalihin.', true],
       ['Buka Puasa Bersama', '2026-06-15', 'Buka puasa bersama warga RW 05. Kontribusi: nasi kotak.', true],
@@ -187,15 +183,15 @@ async function seed() {
       ['Tadarus Al-Quran', '2026-07-10', 'Kegiatan tadarus Al-Quran bersama setiap bulan.', true],
       ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban Idul Adha. Pendaftaran dibuka sampai 10 Juni.', true],
       ['Rapat Pengurus Bulanan', '2026-06-01', 'Rapat koordinasi pengurus masjid. Agenda: evaluasi keuangan.', false],
-    ] as const;
+    ];
 
-    for (const [title, event_date, description, is_active] of activities) {
+    for (const [title, eventDate, description, isActive] of activitiesData) {
       await conn.execute(
-        `INSERT INTO activities (title, event_date, description, is_active) VALUES (?, ?, ?, ?)`,
-        [title, event_date, description, is_active]
+        'INSERT INTO activities (title, event_date, description, is_active) VALUES (?, ?, ?, ?)',
+        [title, eventDate, description, isActive]
       );
     }
-    console.log(`Activities: ${activities.length} records`);
+    console.log(`Activities: ${activitiesData.length} records`);
 
     // ============================================================
     // Summary
@@ -210,9 +206,8 @@ async function seed() {
     console.log(`  - Sedekah: ${sedekah.length} (Jumat + Ramadhan)`);
     console.log(`  - Pengeluaran: ${pengeluaran.length} (operasional, perawatan, sosial)`);
     console.log(`Qurban Tiers: ${tiers.length} (sapi, kambing, domba, sedekah)`);
-    console.log(`Activities: ${activities.length} (7 aktif, 1 nonaktif)`);
+    console.log(`Activities: ${activitiesData.length} (7 aktif, 1 nonaktif)`);
     console.log('====================');
-
   } finally {
     conn.release();
     await pool.end();

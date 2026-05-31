@@ -117,7 +117,7 @@ adminRoutes.put(
     name: { type: 'string', required: false },
     amount: { type: 'number', required: false, min: 1 },
     description: { type: 'string', required: false },
-    sort_order: { type: 'number', required: false },
+    sortOrder: { type: 'number', required: false },
   }),
   async (c) => {
     const id = Number(c.req.param('id'));
@@ -128,12 +128,13 @@ adminRoutes.put(
     const body = await c.req.json();
     const tier = await updateQurbanTier(id, body);
 
-  if (!tier) {
-    return c.json({ success: false, error: 'Tier tidak ditemukan' }, 404);
-  }
+    if (!tier) {
+      return c.json({ success: false, error: 'Tier tidak ditemukan' }, 404);
+    }
 
-  return c.json({ success: true, data: tier });
-});
+    return c.json({ success: true, data: tier });
+  }
+);
 
 adminRoutes.delete('/cms/qurban/:id', async (c) => {
   const id = Number(c.req.param('id'));
@@ -162,7 +163,7 @@ adminRoutes.post(
   '/cms/activities',
   validateBody({
     title: { type: 'string', required: true, min: 1 },
-    event_date: { type: 'string', required: true },
+    eventDate: { type: 'string', required: true },
   }),
   async (c) => {
     const body = await c.req.json();
@@ -175,7 +176,7 @@ adminRoutes.put(
   '/cms/activities/:id',
   validateBody({
     title: { type: 'string', required: false },
-    event_date: { type: 'string', required: false },
+    eventDate: { type: 'string', required: false },
     description: { type: 'string', required: false },
   }),
   async (c) => {

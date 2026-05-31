@@ -34,7 +34,7 @@ export async function authGuard(c: Context, next: Next): Promise<Response | void
   }
 
   // Attach user to context
-  c.set('userId', user?.['userId'] as string);
+  c.set('userId', user?.id as string);
   c.set('session', session);
 
   await next();

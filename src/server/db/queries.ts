@@ -1,4 +1,6 @@
-import pool from './connection.js';
+import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
+import db from './index.js';
+import { transactions, qurbanTiers, activities } from './schema.js';
 import type {
   Transaction,
   CreateTransactionInput,
@@ -9,6 +11,48 @@ import type {
   CreateActivityInput,
   PaginatedResponse,
 } from '../../shared/types.js';
+import { toTransactionId, toQurbanTierId, toActivityId } from '../../shared/types.js';
+
+// --- Helpers ---
+
+function dateStr(d: Date | string): string {
+  if (typeof d === 'string') return d;
+  return d.toISOString().split('T')[0]!;
+}
+
+function asTransaction(row: typeof transactions.$inferSelect): Transaction {
+  return {
+    id: toTransactionId(row.id),
+    type: row.type as Transaction['type'],
+    amount: row.amount,
+    date: dateStr(row.date),
+    donorName: row.donorName,
+    description: row.description ?? '',
+    category: row.category,
+    createdAt: dateStr(row.createdAt),
+  };
+}
+
+function asQurbanTier(row: typeof qurbanTiers.$inferSelect): QurbanTier {
+  return {
+    id: toQurbanTierId(row.id),
+    name: row.name,
+    amount: row.amount,
+    description: row.description ?? '',
+    sortOrder: row.sortOrder,
+    isActive: Boolean(row.isActive),
+  };
+}
+
+function asActivity(row: typeof activities.$inferSelect): Activity {
+  return {
+    id: toActivityId(row.id),
+    title: row.title,
+    eventDate: dateStr(row.eventDate),
+    description: row.description ?? '',
+    isActive: Boolean(row.isActive),
+  };
+}
 
 // --- Transactions ---
 
@@ -20,91 +64,93 @@ export async function getTransactions(
   endDate?: string
 ): Promise<PaginatedResponse<Transaction>> {
   const offset = (page - 1) * limit;
-  const conditions: string[] = [];
-  const params: (string | number)[] = [];
+  const conditions: SQL[] = [];
 
-  if (type) {
-    conditions.push('type = ?');
-    params.push(type);
-  }
-  if (startDate) {
-    conditions.push('date >= ?');
-    params.push(startDate);
-  }
-  if (endDate) {
-    conditions.push('date <= ?');
-    params.push(endDate);
+  if (type) conditions.push(eq(transactions.type, type));
+  if (startDate && endDate) {
+    conditions.push(sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`);
+  } else if (startDate) {
+    conditions.push(sql`${transactions.date} >= ${startDate}`);
+  } else if (endDate) {
+    conditions.push(sql`${transactions.date} <= ${endDate}`);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const [countRows] = await pool.execute(
-    `SELECT COUNT(*) as total FROM transactions ${where}`,
-    params
-  );
-  const total = (countRows as Record<string, unknown>[])[0]?.['total'] as number;
+  const [countResult] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(transactions)
+    .where(where);
 
-  const [rows] = await pool.execute(
-    `SELECT * FROM transactions ${where} ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
+  const rows = await db
+    .select()
+    .from(transactions)
+    .where(where)
+    .orderBy(desc(transactions.date), desc(transactions.createdAt))
+    .limit(limit)
+    .offset(offset);
 
   return {
-    data: rows as Transaction[],
-    total,
+    data: rows.map(asTransaction),
+    total: countResult?.total ?? 0,
     page,
     limit,
   };
 }
 
 export async function createTransaction(input: CreateTransactionInput): Promise<Transaction> {
-  const [result] = await pool.execute(
-    `INSERT INTO transactions (type, amount, date, donor_name, description, category)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [input.type, input.amount, input.date, input.donor_name ?? null, input.description ?? '', input.category ?? null]
-  );
+  const [inserted] = await db
+    .insert(transactions)
+    .values({
+      type: input.type,
+      amount: input.amount,
+      date: sql`${input.date}`,
+      donorName: input.donorName ?? null,
+      description: input.description ?? '',
+      category: input.category ?? null,
+    })
+    .$returningId();
 
-  const insertId = (result as Record<string, unknown>)['insertId'] as number;
-  const [rows] = await pool.execute('SELECT * FROM transactions WHERE id = ?', [insertId]);
-  return (rows as Transaction[])[0]!;
+  const [row] = await db
+    .select()
+    .from(transactions)
+    .where(eq(transactions.id, inserted!.id));
+
+  return asTransaction(row!);
 }
 
 export async function updateTransaction(id: number, input: UpdateTransactionInput): Promise<Transaction | null> {
-  const fields: string[] = [];
-  const params: (string | number)[] = [];
+  const values: Record<string, unknown> = {};
+  if (input.type !== undefined) values.type = input.type;
+  if (input.amount !== undefined) values.amount = input.amount;
+  if (input.date !== undefined) values.date = input.date;
+  if (input.donorName !== undefined) values.donorName = input.donorName;
+  if (input.description !== undefined) values.description = input.description;
+  if (input.category !== undefined) values.category = input.category;
 
-  if (input.type !== undefined) { fields.push('type = ?'); params.push(input.type); }
-  if (input.amount !== undefined) { fields.push('amount = ?'); params.push(input.amount); }
-  if (input.date !== undefined) { fields.push('date = ?'); params.push(input.date); }
-  if (input.donor_name !== undefined) { fields.push('donor_name = ?'); params.push(input.donor_name); }
-  if (input.description !== undefined) { fields.push('description = ?'); params.push(input.description); }
-  if (input.category !== undefined) { fields.push('category = ?'); params.push(input.category); }
-
-  if (fields.length === 0) {
-    const [rows] = await pool.execute('SELECT * FROM transactions WHERE id = ?', [id]);
-    return (rows as Transaction[])[0] ?? null;
+  if (Object.keys(values).length === 0) {
+    const [row] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return row ? asTransaction(row) : null;
   }
 
-  params.push(id);
-  await pool.execute(`UPDATE transactions SET ${fields.join(', ')} WHERE id = ?`, params);
-
-  const [rows] = await pool.execute('SELECT * FROM transactions WHERE id = ?', [id]);
-  return (rows as Transaction[])[0] ?? null;
+  await db.update(transactions).set(values).where(eq(transactions.id, id));
+  const [row] = await db.select().from(transactions).where(eq(transactions.id, id));
+  return row ? asTransaction(row) : null;
 }
 
 export async function deleteTransaction(id: number): Promise<boolean> {
-  const [result] = await pool.execute('DELETE FROM transactions WHERE id = ?', [id]);
-  return ((result as Record<string, unknown>)['affectedRows'] as number) > 0;
+  const result = await db.delete(transactions).where(eq(transactions.id, id));
+  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
 }
 
 // --- Qurban Tiers ---
 
 export async function getQurbanTiers(activeOnly: boolean = false): Promise<QurbanTier[]> {
-  const query = activeOnly
-    ? 'SELECT * FROM qurban_tiers WHERE is_active = true ORDER BY sort_order'
-    : 'SELECT * FROM qurban_tiers ORDER BY sort_order';
-  const [rows] = await pool.execute(query);
-  return rows as QurbanTier[];
+  const rows = activeOnly
+    ? await db.select().from(qurbanTiers).where(eq(qurbanTiers.isActive, true)).orderBy(qurbanTiers.sortOrder)
+    : await db.select().from(qurbanTiers).orderBy(qurbanTiers.sortOrder);
+
+  return rows.map(asQurbanTier);
 }
 
 export async function getQurbanTiersPaginated(
@@ -113,64 +159,70 @@ export async function getQurbanTiersPaginated(
   activeOnly: boolean = false
 ): Promise<PaginatedResponse<QurbanTier>> {
   const offset = (page - 1) * limit;
-  const where = activeOnly ? 'WHERE is_active = true' : '';
+  const where = activeOnly ? eq(qurbanTiers.isActive, true) : undefined;
 
-  const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM qurban_tiers ${where}`);
-  const total = (countRows as Record<string, unknown>[])[0]?.['total'] as number;
+  const [countResult] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(qurbanTiers)
+    .where(where);
 
-  const [rows] = await pool.execute(
-    `SELECT * FROM qurban_tiers ${where} ORDER BY sort_order LIMIT ? OFFSET ?`,
-    [limit, offset]
-  );
+  const rows = await db
+    .select()
+    .from(qurbanTiers)
+    .where(where)
+    .orderBy(qurbanTiers.sortOrder)
+    .limit(limit)
+    .offset(offset);
 
-  return { data: rows as QurbanTier[], total, page, limit };
+  return { data: rows.map(asQurbanTier), total: countResult?.total ?? 0, page, limit };
 }
 
 export async function createQurbanTier(input: CreateQurbanTierInput): Promise<QurbanTier> {
-  const [result] = await pool.execute(
-    `INSERT INTO qurban_tiers (name, amount, description, sort_order) VALUES (?, ?, ?, ?)`,
-    [input.name, input.amount, input.description ?? '', input.sort_order ?? 0]
-  );
-  const insertId = (result as Record<string, unknown>)['insertId'] as number;
-  const [rows] = await pool.execute('SELECT * FROM qurban_tiers WHERE id = ?', [insertId]);
-  return (rows as QurbanTier[])[0]!;
+  const [inserted] = await db
+    .insert(qurbanTiers)
+    .values({
+      name: input.name,
+      amount: input.amount,
+      description: input.description ?? '',
+      sortOrder: input.sortOrder ?? 0,
+    })
+    .$returningId();
+
+  const [row] = await db.select().from(qurbanTiers).where(eq(qurbanTiers.id, inserted!.id));
+  return asQurbanTier(row!);
 }
 
-export async function updateQurbanTier(id: number, input: Partial<CreateQurbanTierInput> & { is_active?: boolean }): Promise<QurbanTier | null> {
-  const fields: string[] = [];
-  const params: (string | number | boolean)[] = [];
+export async function updateQurbanTier(id: number, input: Partial<CreateQurbanTierInput> & { isActive?: boolean }): Promise<QurbanTier | null> {
+  const values: Record<string, unknown> = {};
+  if (input.name !== undefined) values.name = input.name;
+  if (input.amount !== undefined) values.amount = input.amount;
+  if (input.description !== undefined) values.description = input.description;
+  if (input.sortOrder !== undefined) values.sortOrder = input.sortOrder;
+  if (input.isActive !== undefined) values.isActive = input.isActive;
 
-  if (input.name !== undefined) { fields.push('name = ?'); params.push(input.name); }
-  if (input.amount !== undefined) { fields.push('amount = ?'); params.push(input.amount); }
-  if (input.description !== undefined) { fields.push('description = ?'); params.push(input.description); }
-  if (input.sort_order !== undefined) { fields.push('sort_order = ?'); params.push(input.sort_order); }
-  if (input.is_active !== undefined) { fields.push('is_active = ?'); params.push(input.is_active); }
-
-  if (fields.length === 0) {
-    const [rows] = await pool.execute('SELECT * FROM qurban_tiers WHERE id = ?', [id]);
-    return (rows as QurbanTier[])[0] ?? null;
+  if (Object.keys(values).length === 0) {
+    const [row] = await db.select().from(qurbanTiers).where(eq(qurbanTiers.id, id));
+    return row ? asQurbanTier(row) : null;
   }
 
-  params.push(id);
-  await pool.execute(`UPDATE qurban_tiers SET ${fields.join(', ')} WHERE id = ?`, params);
-
-  const [rows] = await pool.execute('SELECT * FROM qurban_tiers WHERE id = ?', [id]);
-  return (rows as QurbanTier[])[0] ?? null;
+  await db.update(qurbanTiers).set(values).where(eq(qurbanTiers.id, id));
+  const [row] = await db.select().from(qurbanTiers).where(eq(qurbanTiers.id, id));
+  return row ? asQurbanTier(row) : null;
 }
 
 export async function deleteQurbanTier(id: number): Promise<boolean> {
-  const [result] = await pool.execute('DELETE FROM qurban_tiers WHERE id = ?', [id]);
-  return ((result as Record<string, unknown>)['affectedRows'] as number) > 0;
+  const result = await db.delete(qurbanTiers).where(eq(qurbanTiers.id, id));
+  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
 }
 
 // --- Activities ---
 
 export async function getActivities(activeOnly: boolean = false): Promise<Activity[]> {
-  const query = activeOnly
-    ? 'SELECT * FROM activities WHERE is_active = true ORDER BY event_date DESC'
-    : 'SELECT * FROM activities ORDER BY event_date DESC';
-  const [rows] = await pool.execute(query);
-  return rows as Activity[];
+  const rows = activeOnly
+    ? await db.select().from(activities).where(eq(activities.isActive, true)).orderBy(desc(activities.eventDate))
+    : await db.select().from(activities).orderBy(desc(activities.eventDate));
+
+  return rows.map(asActivity);
 }
 
 export async function getActivitiesPaginated(
@@ -179,53 +231,58 @@ export async function getActivitiesPaginated(
   activeOnly: boolean = false
 ): Promise<PaginatedResponse<Activity>> {
   const offset = (page - 1) * limit;
-  const where = activeOnly ? 'WHERE is_active = true' : '';
+  const where = activeOnly ? eq(activities.isActive, true) : undefined;
 
-  const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM activities ${where}`);
-  const total = (countRows as Record<string, unknown>[])[0]?.['total'] as number;
+  const [countResult] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(activities)
+    .where(where);
 
-  const [rows] = await pool.execute(
-    `SELECT * FROM activities ${where} ORDER BY event_date DESC LIMIT ? OFFSET ?`,
-    [limit, offset]
-  );
+  const rows = await db
+    .select()
+    .from(activities)
+    .where(where)
+    .orderBy(desc(activities.eventDate))
+    .limit(limit)
+    .offset(offset);
 
-  return { data: rows as Activity[], total, page, limit };
+  return { data: rows.map(asActivity), total: countResult?.total ?? 0, page, limit };
 }
 
 export async function createActivity(input: CreateActivityInput): Promise<Activity> {
-  const [result] = await pool.execute(
-    `INSERT INTO activities (title, event_date, description) VALUES (?, ?, ?)`,
-    [input.title, input.event_date, input.description ?? '']
-  );
-  const insertId = (result as Record<string, unknown>)['insertId'] as number;
-  const [rows] = await pool.execute('SELECT * FROM activities WHERE id = ?', [insertId]);
-  return (rows as Activity[])[0]!;
+  const [inserted] = await db
+    .insert(activities)
+    .values({
+      title: input.title,
+      eventDate: sql`${input.eventDate}`,
+      description: input.description ?? '',
+    })
+    .$returningId();
+
+  const [row] = await db.select().from(activities).where(eq(activities.id, inserted!.id));
+  return asActivity(row!);
 }
 
-export async function updateActivity(id: number, input: Partial<CreateActivityInput> & { is_active?: boolean }): Promise<Activity | null> {
-  const fields: string[] = [];
-  const params: (string | number | boolean)[] = [];
+export async function updateActivity(id: number, input: Partial<CreateActivityInput> & { isActive?: boolean }): Promise<Activity | null> {
+  const values: Record<string, unknown> = {};
+  if (input.title !== undefined) values.title = input.title;
+  if (input.eventDate !== undefined) values.eventDate = input.eventDate;
+  if (input.description !== undefined) values.description = input.description;
+  if (input.isActive !== undefined) values.isActive = input.isActive;
 
-  if (input.title !== undefined) { fields.push('title = ?'); params.push(input.title); }
-  if (input.event_date !== undefined) { fields.push('event_date = ?'); params.push(input.event_date); }
-  if (input.description !== undefined) { fields.push('description = ?'); params.push(input.description); }
-  if (input.is_active !== undefined) { fields.push('is_active = ?'); params.push(input.is_active); }
-
-  if (fields.length === 0) {
-    const [rows] = await pool.execute('SELECT * FROM activities WHERE id = ?', [id]);
-    return (rows as Activity[])[0] ?? null;
+  if (Object.keys(values).length === 0) {
+    const [row] = await db.select().from(activities).where(eq(activities.id, id));
+    return row ? asActivity(row) : null;
   }
 
-  params.push(id);
-  await pool.execute(`UPDATE activities SET ${fields.join(', ')} WHERE id = ?`, params);
-
-  const [rows] = await pool.execute('SELECT * FROM activities WHERE id = ?', [id]);
-  return (rows as Activity[])[0] ?? null;
+  await db.update(activities).set(values).where(eq(activities.id, id));
+  const [row] = await db.select().from(activities).where(eq(activities.id, id));
+  return row ? asActivity(row) : null;
 }
 
 export async function deleteActivity(id: number): Promise<boolean> {
-  const [result] = await pool.execute('DELETE FROM activities WHERE id = ?', [id]);
-  return ((result as Record<string, unknown>)['affectedRows'] as number) > 0;
+  const result = await db.delete(activities).where(eq(activities.id, id));
+  return (result[0] as unknown as { affectedRows: number }).affectedRows > 0;
 }
 
 // --- Reports ---
@@ -236,16 +293,22 @@ export async function getReportSummary(
 ): Promise<{
   pemasukan: Record<string, number>;
   pengeluaran: number;
-  pengeluaran_per_kategori: Record<string, number>;
+  pengeluaranPerKategori: Record<string, number>;
   saldo: number;
 }> {
-  const [pemasukanRows] = await pool.execute(
-    `SELECT type, COALESCE(SUM(amount), 0) as total
-     FROM transactions
-     WHERE type != 'pengeluaran' AND date BETWEEN ? AND ?
-     GROUP BY type`,
-    [startDate, endDate]
-  );
+  const pemasukanRows = await db
+    .select({
+      type: transactions.type,
+      total: sql<number>`coalesce(sum(${transactions.amount}), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        sql`${transactions.type} != 'pengeluaran'`,
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`
+      )
+    )
+    .groupBy(transactions.type);
 
   const pemasukan: Record<string, number> = {
     jimpitan: 0,
@@ -253,42 +316,50 @@ export async function getReportSummary(
     zakat: 0,
     sedekah: 0,
   };
-  for (const row of pemasukanRows as Record<string, unknown>[]) {
-    pemasukan[row['type'] as string] = row['total'] as number;
+  for (const row of pemasukanRows) {
+    pemasukan[row.type] = row.total;
   }
 
-  // Pengeluaran total + breakdown per kategori
-  const [pengeluaranRows] = await pool.execute(
-    `SELECT COALESCE(SUM(amount), 0) as total
-     FROM transactions
-     WHERE type = 'pengeluaran' AND date BETWEEN ? AND ?`,
-    [startDate, endDate]
-  );
-  const pengeluaran = (pengeluaranRows as Record<string, unknown>[])[0]?.['total'] as number;
+  const [pengeluaranResult] = await db
+    .select({ total: sql<number>`coalesce(sum(${transactions.amount}), 0)` })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.type, 'pengeluaran'),
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`
+      )
+    );
 
-  const [kategoriRows] = await pool.execute(
-    `SELECT category, COALESCE(SUM(amount), 0) as total
-     FROM transactions
-     WHERE type = 'pengeluaran' AND date BETWEEN ? AND ?
-     GROUP BY category`,
-    [startDate, endDate]
-  );
-  const pengeluaran_per_kategori: Record<string, number> = {
+  const kategoriRows = await db
+    .select({
+      category: transactions.category,
+      total: sql<number>`coalesce(sum(${transactions.amount}), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.type, 'pengeluaran'),
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`
+      )
+    )
+    .groupBy(transactions.category);
+
+  const pengeluaranPerKategori: Record<string, number> = {
     operasional: 0,
     perawatan: 0,
     sosial: 0,
   };
-  for (const row of kategoriRows as Record<string, unknown>[]) {
-    const cat = (row['category'] as string) ?? 'lainnya';
-    pengeluaran_per_kategori[cat] = row['total'] as number;
+  for (const row of kategoriRows) {
+    const cat = row.category ?? 'lainnya';
+    pengeluaranPerKategori[cat] = row.total;
   }
 
   const totalPemasukan = Object.values(pemasukan).reduce((a, b) => a + b, 0);
 
   return {
     pemasukan,
-    pengeluaran,
-    pengeluaran_per_kategori,
-    saldo: totalPemasukan - pengeluaran,
+    pengeluaran: pengeluaranResult?.total ?? 0,
+    pengeluaranPerKategori,
+    saldo: totalPemasukan - (pengeluaranResult?.total ?? 0),
   };
 }

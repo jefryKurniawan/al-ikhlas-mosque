@@ -25,17 +25,17 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   date: string;
-  donor_name: string | null;
+  donorName: string | null;
   description: string;
   category: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface CreateTransactionInput {
   type: TransactionType;
   amount: number;
   date: string;
-  donor_name?: string;
+  donorName?: string;
   description?: string;
   category?: string;
 }
@@ -44,7 +44,7 @@ export interface UpdateTransactionInput {
   type?: TransactionType;
   amount?: number;
   date?: string;
-  donor_name?: string;
+  donorName?: string;
   description?: string;
   category?: string;
 }
@@ -55,29 +55,29 @@ export interface QurbanTier {
   name: string;
   amount: number;
   description: string;
-  sort_order: number;
-  is_active: boolean;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 export interface CreateQurbanTierInput {
   name: string;
   amount: number;
   description?: string;
-  sort_order?: number;
+  sortOrder?: number;
 }
 
 // --- Activity Types ---
 export interface Activity {
   id: ActivityId;
   title: string;
-  event_date: string;
+  eventDate: string;
   description: string;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 export interface CreateActivityInput {
   title: string;
-  event_date: string;
+  eventDate: string;
   description?: string;
 }
 
@@ -86,11 +86,11 @@ export interface User {
   id: UserId;
   username: string | null;
   email: string | null;
-  password_hash: string | null;
+  passwordHash: string | null;
   provider: 'google' | 'apple' | 'credentials';
-  provider_id: string | null;
+  providerId: string | null;
   role: 'admin';
-  created_at: string;
+  createdAt: string;
 }
 
 // --- API Response Types ---
@@ -132,7 +132,7 @@ export interface ReportQuery {
 export interface ReportSummary {
   pemasukan: Record<TransactionType, number>;
   pengeluaran: number;
-  pengeluaran_per_kategori: Record<string, number>;
+  pengeluaranPerKategori: Record<string, number>;
   saldo: number;
   periode: string;
   transactions?: Transaction[];

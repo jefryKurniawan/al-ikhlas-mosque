@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
-import { lucia, generateId } from '../lib/auth.js';
+import { eq, and } from 'drizzle-orm';
+import { lucia } from '../lib/auth.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
 import { isStrongPassword } from '../lib/sanitize.js';
 import { rateLimit } from '../middleware/rate-limiter.js';
-import pool from '../db/connection.js';
+import db from '../db/index.js';
+import { users } from '../db/schema.js';
 import type { User } from '../../shared/types.js';
+import { toUserId } from '../../shared/types.js';
 
 const authRoutes = new Hono();
 
@@ -26,32 +29,31 @@ authRoutes.post('/login', async (c) => {
   }
 
   // Find user by username
-  const [rows] = await pool.execute(
-    'SELECT * FROM users WHERE username = ? AND provider = ?',
-    [username, 'credentials']
-  );
-  const user = (rows as User[])[0];
+  const [row] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.username, username), eq(users.provider, 'credentials')));
 
-  if (!user || !user.password_hash) {
+  if (!row || !row.passwordHash) {
     return c.json({ success: false, error: 'Username atau password salah' }, 401);
   }
 
-  const valid = await verifyPassword(password, user.password_hash);
+  const valid = await verifyPassword(password, row.passwordHash);
   if (!valid) {
     return c.json({ success: false, error: 'Username atau password salah' }, 401);
   }
 
   // Create session
-  const session = await lucia.createSession(user.id, {});
+  const session = await lucia.createSession(row.id, {});
   const cookie = lucia.createSessionCookie(session.id);
   c.header('Set-Cookie', cookie.serialize());
 
   return c.json({
     success: true,
     data: {
-      userId: user.id,
-      username: user.username,
-      role: user.role,
+      userId: row.id,
+      username: row.username,
+      role: row.role,
     },
   });
 });
@@ -87,10 +89,10 @@ authRoutes.get('/me', async (c) => {
   return c.json({
     success: true,
     data: {
-      userId: user?.['userId'],
-      username: user?.['username'],
-      email: user?.['email'],
-      role: user?.['role'],
+      userId: user?.id,
+      username: user?.username,
+      email: user?.email,
+      role: user?.role,
     },
   });
 });
