@@ -144,7 +144,7 @@ export async function sanitizeMiddleware(c: Context, next: Next): Promise<void> 
 
 // Reusable report validation schema
 export const reportSchema = {
-  type: { type: 'string' as const, required: true, enum: ['bulanan', 'tahunan', 'setelah_idul_adha', 'setelah_idul_fitri', 'sebelum_ramadhan'] },
+  type: { type: 'string' as const, required: true, enum: ['bulanan', 'tahunan', 'jimpitan', 'zakat', 'ramadhan', 'qurban'] },
   year: { type: 'number' as const, required: true, min: 2000, max: 2100 },
   month: { type: 'number' as const, required: false, min: 1, max: 12 },
 };

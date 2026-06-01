@@ -69,10 +69,14 @@ export interface CreateQurbanTierInput {
 }
 
 // --- Activity Types ---
+export type ActivityCategory = 'rutin' | 'besar';
+
 export interface Activity {
   id: ActivityId;
   title: string;
   eventDate: string;
+  eventTime: string | null;
+  category: ActivityCategory;
   description: string;
   imageUrl: string | null;
   isActive: boolean;
@@ -81,6 +85,8 @@ export interface Activity {
 export interface CreateActivityInput {
   title: string;
   eventDate: string;
+  eventTime?: string;
+  category?: ActivityCategory;
   description?: string;
   imageUrl?: string;
 }
@@ -138,7 +144,7 @@ export interface PrayerTime {
 }
 
 // --- Report Types ---
-export type ReportType = 'bulanan' | 'tahunan' | 'setelah_idul_adha' | 'setelah_idul_fitri' | 'sebelum_ramadhan';
+export type ReportType = 'bulanan' | 'tahunan' | 'jimpitan' | 'zakat' | 'ramadhan' | 'qurban';
 
 export interface ReportQuery {
   type: ReportType;
@@ -148,10 +154,52 @@ export interface ReportQuery {
 }
 
 export interface ReportSummary {
-  pemasukan: Record<TransactionType, number>;
+  pemasukan: Record<string, number>;
   pengeluaran: number;
   pengeluaranPerKategori: Record<string, number>;
   saldo: number;
   periode: string;
   transactions?: Transaction[];
+}
+
+// --- Specialized Report Types ---
+
+export interface JimpitanRecap {
+  rt: string;
+  total: number;
+  bulan: string;
+}
+
+export interface JimpitanReport {
+  periode: string;
+  totalKeseluruhan: number;
+  recapPerRT: JimpitanRecap[];
+  transactions: Transaction[];
+}
+
+export interface ZakatReport {
+  periode: string;
+  totalZakat: number;
+  totalSedekah: number;
+  totalKeseluruhan: number;
+  transactions: Transaction[];
+}
+
+export interface RamadhanReport {
+  year: number;
+  periode: string;
+  totalPemasukan: number;
+  totalPengeluaran: number;
+  saldo: number;
+  pemasukanDetail: { type: string; total: number }[];
+  pengeluaranDetail: Transaction[];
+  transactions: Transaction[];
+}
+
+export interface QurbanReport {
+  year: number;
+  periode: string;
+  tiers: QurbanTier[];
+  totalOperasional: number;
+  transactions: Transaction[];
 }

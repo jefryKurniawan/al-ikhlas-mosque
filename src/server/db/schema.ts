@@ -63,6 +63,8 @@ export const activities = mysqlTable('activities', {
   id: int('id').autoincrement().primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
   eventDate: date('event_date').notNull(),
+  eventTime: varchar('event_time', { length: 10 }),
+  category: varchar('category', { length: 20 }).notNull().default('besar'),
   description: text('description'),
   imageUrl: varchar('image_url', { length: 500 }),
   isActive: boolean('is_active').notNull().default(true),

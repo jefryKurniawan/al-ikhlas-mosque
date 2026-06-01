@@ -2,8 +2,24 @@ import { Hono } from 'hono';
 import type { Env } from 'hono';
 
 type AppEnv = Env & { Variables: { body: Record<string, unknown> } };
-import { getQurbanTiers, getActivities, getReportSummary, getTransactions } from '../db/queries.js';
-import { generateCsv, generateReportHtml } from '../lib/export.js';
+import {
+  getQurbanTiers,
+  getActivities,
+  getReportSummary,
+  getTransactions,
+  getJimpitanReport,
+  getZakatReport,
+  getRamadhanReport,
+  getQurbanReport,
+} from '../db/queries.js';
+import {
+  generateCsv,
+  generateReportHtml,
+  generateJimpitanHtml,
+  generateZakatHtml,
+  generateRamadhanHtml,
+  generateQurbanHtml,
+} from '../lib/export.js';
 import { getDateRange } from '../../shared/date-range.js';
 import { validateBody, reportSchema } from '../middleware/validate.js';
 
@@ -81,8 +97,8 @@ publicRoutes.get('/qurban-tiers', async (c) => {
 
 // --- Activities (active only) ---
 publicRoutes.get('/activities', async (c) => {
-  const activities = await getActivities(true);
-  return c.json({ success: true, data: activities });
+  const activitiesList = await getActivities(true);
+  return c.json({ success: true, data: activitiesList });
 });
 
 // --- Public Report (anonymous, no donor names) ---
@@ -128,6 +144,151 @@ publicRoutes.post('/reports/pdf', validateBody(reportSchema), async (c) => {
 
   c.header('Content-Type', 'text/html; charset=utf-8');
   return c.body(html);
+});
+
+// ============================================================
+// Specialized Report Endpoints (Public)
+// ============================================================
+
+// --- Jimpitan Report ---
+publicRoutes.get('/reports/jimpitan', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const month = c.req.query('month') ? Number(c.req.query('month')) : undefined;
+
+  const { startDate, endDate } = getDateRange('bulanan', year, month);
+  const report = await getJimpitanReport(startDate, endDate);
+  return c.json({ success: true, data: report });
+});
+
+publicRoutes.get('/reports/jimpitan/csv', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const month = c.req.query('month') ? Number(c.req.query('month')) : undefined;
+
+  const { startDate, endDate } = getDateRange('bulanan', year, month);
+  const report = await getJimpitanReport(startDate, endDate);
+
+  // Custom CSV for jimpitan recap
+  const headers = ['RT', 'Total (Rp)'];
+  const rows = report.recapPerRT.map(r => `"${r.rt}","${r.total}"`);
+  const csv = [headers.join(','), ...rows, `"TOTAL","${report.totalKeseluruhan}"`].join('\n');
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-jimpitan-${year}${month ? `-${String(month).padStart(2, '0')}` : ''}.csv"`);
+  return c.body(csv);
+});
+
+publicRoutes.get('/reports/jimpitan/html', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const month = c.req.query('month') ? Number(c.req.query('month')) : undefined;
+
+  const { startDate, endDate } = getDateRange('bulanan', year, month);
+  const report = await getJimpitanReport(startDate, endDate);
+  const html = generateJimpitanHtml(report);
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
+// --- Zakat Report ---
+publicRoutes.get('/reports/zakat', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+
+  // Zakat period: around Ramadhan (Feb-Apr)
+  const { startDate, endDate } = getDateRange('setelah_idul_fitri', year);
+  const report = await getZakatReport(startDate, endDate);
+  return c.json({ success: true, data: report });
+});
+
+publicRoutes.get('/reports/zakat/csv', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const { startDate, endDate } = getDateRange('setelah_idul_fitri', year);
+  const report = await getZakatReport(startDate, endDate);
+  const csv = generateCsv(report.transactions, true);
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-zakat-${year}.csv"`);
+  return c.body(csv);
+});
+
+publicRoutes.get('/reports/zakat/html', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const { startDate, endDate } = getDateRange('setelah_idul_fitri', year);
+  const report = await getZakatReport(startDate, endDate);
+  const html = generateZakatHtml(report);
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
+// --- Ramadhan Report ---
+publicRoutes.get('/reports/ramadhan', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getRamadhanReport(year);
+  return c.json({ success: true, data: report });
+});
+
+publicRoutes.get('/reports/ramadhan/csv', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getRamadhanReport(year);
+  const csv = generateCsv(report.transactions, false);
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-ramadhan-${year}.csv"`);
+  return c.body(csv);
+});
+
+publicRoutes.get('/reports/ramadhan/html', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getRamadhanReport(year);
+  const html = generateRamadhanHtml(report);
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
+// --- Qurban Report ---
+publicRoutes.get('/reports/qurban', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getQurbanReport(year);
+  return c.json({ success: true, data: report });
+});
+
+publicRoutes.get('/reports/qurban/csv', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getQurbanReport(year);
+
+  // Custom CSV for qurban
+  const headers = ['Paket', 'Harga (Rp)', 'Deskripsi'];
+  const rows = report.tiers.map(t => `"${t.name}","${t.amount}","${t.description ?? ''}"`);
+  const csv = [headers.join(','), ...rows].join('\n');
+
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', `attachment; filename="laporan-qurban-${year}.csv"`);
+  return c.body(csv);
+});
+
+publicRoutes.get('/reports/qurban/html', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const report = await getQurbanReport(year);
+  const html = generateQurbanHtml(report);
+
+  c.header('Content-Type', 'text/html; charset=utf-8');
+  return c.body(html);
+});
+
+// --- List available report types ---
+publicRoutes.get('/reports', (c) => {
+  return c.json({
+    success: true,
+    data: [
+      { type: 'bulanan', label: 'Laporan Bulanan', params: 'year, month' },
+      { type: 'tahunan', label: 'Laporan Tahunan', params: 'year' },
+      { type: 'jimpitan', label: 'Laporan Jimpitan', params: 'year, month (opsional)' },
+      { type: 'zakat', label: 'Laporan Zakat & Sedekah', params: 'year' },
+      { type: 'ramadhan', label: 'Laporan Ramadhan', params: 'year' },
+      { type: 'qurban', label: 'Laporan Idul Adha & Qurban', params: 'year' },
+    ],
+  });
 });
 
 

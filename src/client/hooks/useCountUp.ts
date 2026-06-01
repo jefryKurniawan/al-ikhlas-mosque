@@ -10,7 +10,7 @@ export function useCountUp(end: number, duration: number = 1500) {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated.current) {
+        if (entry?.isIntersecting && !hasAnimated.current) {
           hasAnimated.current = true;
           const start = performance.now();
 

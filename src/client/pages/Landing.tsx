@@ -92,7 +92,11 @@ function getNextPrayerIndex(prayers: PrayerTime[]): number {
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   for (let i = 0; i < prayers.length; i++) {
-    const [h, m] = prayers[i].time.split(':').map(Number);
+    const prayer = prayers[i];
+    if (!prayer) continue;
+    const parts = prayer.time.split(':');
+    const h = Number(parts[0] ?? '0');
+    const m = Number(parts[1] ?? '0');
     const prayerMinutes = h * 60 + m;
     if (prayerMinutes > nowMinutes) return i;
   }
@@ -243,6 +247,10 @@ function ActivitiesSection({
                   <div class={s.timelineDate}>
                     <CalendarDays size={14} />
                     <span>{formatDate(a.eventDate)}</span>
+                    {a.eventTime && <><Clock size={14} /> <span>{a.eventTime}</span></>}
+                    <span class={a.category === 'rutin' ? s.badgeRutin : s.badgeBesar}>
+                      {a.category === 'rutin' ? 'Rutin' : 'Besar'}
+                    </span>
                   </div>
                   <h3 class={s.timelineTitle}>{a.title}</h3>
                   <p class={s.timelineDesc}>{a.description}</p>

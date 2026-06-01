@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `sessions` (
-  `id` VARCHAR(36) PRIMARY KEY,
+  `id` VARCHAR(64) PRIMARY KEY,
   `user_id` VARCHAR(36) NOT NULL,
   `expires_at` DATETIME NOT NULL,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `qurban_tiers` (
   `name` VARCHAR(255) NOT NULL,
   `amount` INT NOT NULL,
   `description` TEXT,
+  `image_url` VARCHAR(500),
   `sort_order` INT NOT NULL DEFAULT 0,
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
   INDEX `idx_qurban_active` (`is_active`, `sort_order`)
@@ -53,6 +54,7 @@ CREATE TABLE IF NOT EXISTS `activities` (
   `title` VARCHAR(255) NOT NULL,
   `event_date` DATE NOT NULL,
   `description` TEXT,
+  `image_url` VARCHAR(500),
   `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
   INDEX `idx_activities_active` (`is_active`, `event_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -12,21 +12,42 @@ async function seed() {
   const conn = await pool.getConnection();
 
   try {
+    // Check if data already exists (idempotent)
+    const [existingTx] = await conn.execute('SELECT COUNT(*) as cnt FROM transactions');
+    const txCount = (existingTx as unknown as Array<{ cnt: number }>)[0]?.cnt ?? 0;
+
+    if (txCount > 0) {
+      console.log(`Database already has ${txCount} transactions. Skipping seed data.`);
+      console.log('Users will still be upserted...\n');
+    }
+
     // ============================================================
     // 1. USERS — Admin accounts
     // ============================================================
     const adminId = generateId();
     const bendaharaId = generateId();
-    // Generate a strong random password (16 chars, alphanumeric)
-    const seedPassword = randomBytes(12).toString('base64url').slice(0, 16);
-    const passwordHash = await hashPassword(seedPassword);
+    // Fixed dev passwords (change in production!)
+    const adminPassword = 'Admin1234';
+    const bendaharaPassword = 'Bendahara1234';
+    const adminHash = await hashPassword(adminPassword);
+    const bendaharaHash = await hashPassword(bendaharaPassword);
 
     await db.insert(users).values([
-      { id: adminId, username: 'admin', email: 'admin@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
-      { id: bendaharaId, username: 'bendahara', email: 'bendahara@masjidalikhlas.id', passwordHash, provider: 'credentials', role: 'admin' },
-    ]).onDuplicateKeyUpdate({ set: { id: sql`id` } });
-    console.log(`Users: admin, bendahara (password: ${seedPassword})`);
-    console.log('⚠️  Simpan password ini! Tidak akan ditampilkan lagi.');
+      { id: adminId, username: 'admin', email: 'admin@masjidalikhlas.id', passwordHash: adminHash, provider: 'credentials', role: 'admin' },
+    ]).onDuplicateKeyUpdate({ set: { passwordHash: adminHash } });
+
+    await db.insert(users).values([
+      { id: bendaharaId, username: 'bendahara', email: 'bendahara@masjidalikhlas.id', passwordHash: bendaharaHash, provider: 'credentials', role: 'admin' },
+    ]).onDuplicateKeyUpdate({ set: { passwordHash: bendaharaHash } });
+    console.log('Users seeded:');
+    console.log('  admin     / Admin1234');
+    console.log('  bendahara / Bendahara1234');
+
+    // Skip transaction/activity/tier seed if data already exists
+    if (txCount > 0) {
+      console.log('\nSeed data already present. Only users were upserted.');
+      return;
+    }
 
     // ============================================================
     // 2. TRANSACTIONS — Jimpitan (bulanan per RT)
@@ -142,7 +163,7 @@ async function seed() {
       ['2026-04-25', 3500000, 'THR marbot & imam', 'operasional'],
       ['2026-05-01', 600000, 'Distribusi zakat fakir miskin', 'sosial'],
       ['2026-05-10', 1300000, 'Bayar listrik April', 'operasional'],
-      ['2026-05-15', 1500000, 'Servis AC masjid', 'perawatan'],
+      ['2026-05-15', 1500000, 'Servis kipas angin masjid', 'perawatan'],
     ];
 
     for (const [date, amount, description, category] of pengeluaran) {
@@ -178,21 +199,21 @@ async function seed() {
     // ============================================================
     // 8. ACTIVITIES — Kegiatan masjid
     // ============================================================
-    const activitiesData: [string, string, string, string, boolean][] = [
-      ['Pengajian Selapanan Ahad Kliwonan', '2026-06-08', 'Pengajian umum tingkat dusun dengan penceramah dari luar desa. Silaturahmi warga se-Poncol.', null, true],
-      ['TPQ Al-Ikhlas (Anak-anak)', '2026-06-01', 'Belajar mengaji untuk anak-anak dukuh setiap sore Senin-Jumat. Terbuka untuk usia 4-12 tahun.', null, true],
-      ['Santunan Anak Yatim & Dhuafa', '2026-06-20', 'Penyaluran dana santunan dari kas sedekah masjid untuk warga dukuh yang membutuhkan.', null, true],
-      ['Megengan Menjelang Ramadhan', '2026-06-25', 'Kenduri doa bersama warga membawa ambengan (makanan) untuk menyambut bulan puasa.', null, true],
-      ['Kerja Bakti Bersih Masjid', '2026-06-15', 'Gotong royong warga membersihkan masjid, tempat wudhu, dan area sekitar. Setiap Ahad pagi.', null, true],
-      ['Takbiran Keliling Dusun', '2026-06-26', 'Takbiran keliling dusun dengan obor dan pengeras suara menyambut Hari Raya Idul Fitri.', null, true],
-      ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban. Kerja bakti penyembelihan dan pendistribusian daging ke seluruh KK di dukuh.', null, true],
-      ['Rapat Pengurus & Tokoh RT', '2026-06-01', 'Musyawarah bulanan evaluasi kas masjid, laporan jimpitan, dan rencana kegiatan.', null, false],
+    const activitiesData: [string, string, string, string, string, string, boolean][] = [
+      ['Pengajian Selapanan Ahad Kliwonan', '2026-06-08', '20:00', 'besar', 'Pengajian umum tingkat dusun dengan penceramah dari luar desa. Silaturahmi warga se-Poncol.', '', true],
+      ['TPQ Al-Ikhlas (Anak-anak)', '2026-06-01', '15:30', 'rutin', 'Belajar mengaji untuk anak-anak dukuh setiap sore Senin-Jumat. Terbuka untuk usia 4-12 tahun.', '', true],
+      ['Santunan Anak Yatim & Dhuafa', '2026-06-20', '09:00', 'besar', 'Penyaluran dana santunan dari kas sedekah masjid untuk warga dukuh yang membutuhkan.', '', true],
+      ['Megengan Menjelang Ramadhan', '2026-06-25', '19:00', 'besar', 'Kenduri doa bersama warga membawa ambengan (makanan) untuk menyambut bulan puasa.', '', true],
+      ['Kerja Bakti Bersih Masjid', '2026-06-15', '07:00', 'rutin', 'Gotong royong warga membersihkan masjid, tempat wudhu, dan area sekitar. Setiap Ahad pagi.', '', true],
+      ['Takbiran Keliling Dusun', '2026-06-26', '19:30', 'besar', 'Takbiran keliling dusun dengan obor dan pengeras suara menyambut Hari Raya Idul Fitri.', '', true],
+      ['Kurban Idul Adha 1447 H', '2026-06-17', '07:00', 'besar', 'Pelaksanaan kurban. Kerja bakti penyembelihan dan pendistribusian daging ke seluruh KK di dukuh.', '', true],
+      ['Rapat Pengurus & Tokoh RT', '2026-06-01', '20:00', 'rutin', 'Musyawarah bulanan evaluasi kas masjid, laporan jimpitan, dan rencana kegiatan.', '', false],
     ];
 
-    for (const [title, eventDate, description, imageUrl, isActive] of activitiesData) {
+    for (const [title, eventDate, eventTime, category, description, imageUrl, isActive] of activitiesData) {
       await conn.execute(
-        'INSERT INTO activities (title, event_date, description, image_url, is_active) VALUES (?, ?, ?, ?, ?)',
-        [title, eventDate, description, imageUrl, isActive]
+        'INSERT INTO activities (title, event_date, event_time, category, description, image_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [title, eventDate, eventTime, category, description, imageUrl, isActive]
       );
     }
     console.log(`Activities: ${activitiesData.length} records`);

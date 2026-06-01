@@ -56,6 +56,8 @@ function asActivity(row: typeof activities.$inferSelect): Activity {
     id: toActivityId(row.id),
     title: row.title,
     eventDate: dateStr(row.eventDate),
+    eventTime: row.eventTime ?? null,
+    category: (row.category as Activity['category']) ?? 'besar',
     description: row.description ?? '',
     imageUrl: row.imageUrl ?? null,
     isActive: Boolean(row.isActive),
@@ -267,6 +269,8 @@ export async function createActivity(input: CreateActivityInput): Promise<Activi
     .values({
       title: input.title,
       eventDate: sql`${input.eventDate}`,
+      eventTime: input.eventTime ?? null,
+      category: input.category ?? 'besar',
       description: input.description ?? '',
       imageUrl: input.imageUrl ?? null,
     })
@@ -280,6 +284,8 @@ export async function updateActivity(id: number, input: Partial<CreateActivityIn
   const values: Record<string, unknown> = {};
   if (input.title !== undefined) values.title = input.title;
   if (input.eventDate !== undefined) values.eventDate = input.eventDate;
+  if (input.eventTime !== undefined) values.eventTime = input.eventTime;
+  if (input.category !== undefined) values.category = input.category;
   if (input.description !== undefined) values.description = input.description;
   if (input.imageUrl !== undefined) values.imageUrl = input.imageUrl;
   if (input.isActive !== undefined) values.isActive = input.isActive;
@@ -376,6 +382,176 @@ export async function getReportSummary(
     pengeluaran: pengeluaranResult?.total ?? 0,
     pengeluaranPerKategori,
     saldo: totalPemasukan - (pengeluaranResult?.total ?? 0),
+  };
+}
+
+// --- Specialized Reports ---
+
+export async function getJimpitanReport(
+  startDate: string,
+  endDate: string
+): Promise<{
+  periode: string;
+  totalKeseluruhan: number;
+  recapPerRT: { rt: string; total: number; bulan: string }[];
+  transactions: Transaction[];
+}> {
+  // Get all jimpitan transactions in period
+  const rows = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.type, 'jimpitan'),
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`
+      )
+    )
+    .orderBy(transactions.date);
+
+  const txList = rows.map(asTransaction);
+
+  // Extract RT from description (e.g., "Jimpitan RT 01 Januari")
+  const recapMap = new Map<string, number>();
+  for (const tx of txList) {
+    const match = tx.description.match(/RT\s*(\d+)/i);
+    const rt = match ? `RT ${match[1]}` : 'Lainnya';
+    recapMap.set(rt, (recapMap.get(rt) ?? 0) + tx.amount);
+  }
+
+  const totalKeseluruhan = txList.reduce((sum, tx) => sum + tx.amount, 0);
+
+  return {
+    periode: `${startDate} s/d ${endDate}`,
+    totalKeseluruhan,
+    recapPerRT: Array.from(recapMap.entries()).map(([rt, total]) => ({
+      rt,
+      total,
+      bulan: startDate.slice(0, 7), // YYYY-MM
+    })),
+    transactions: txList,
+  };
+}
+
+export async function getZakatReport(
+  startDate: string,
+  endDate: string
+): Promise<{
+  periode: string;
+  totalZakat: number;
+  totalSedekah: number;
+  totalKeseluruhan: number;
+  transactions: Transaction[];
+}> {
+  const rows = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        sql`${transactions.type} IN ('zakat', 'sedekah')`,
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`
+      )
+    )
+    .orderBy(transactions.date);
+
+  const txList = rows.map(asTransaction);
+  const totalZakat = txList.filter(t => t.type === 'zakat').reduce((s, t) => s + t.amount, 0);
+  const totalSedekah = txList.filter(t => t.type === 'sedekah').reduce((s, t) => s + t.amount, 0);
+
+  return {
+    periode: `${startDate} s/d ${endDate}`,
+    totalZakat,
+    totalSedekah,
+    totalKeseluruhan: totalZakat + totalSedekah,
+    transactions: txList,
+  };
+}
+
+export async function getRamadhanReport(year: number): Promise<{
+  year: number;
+  periode: string;
+  totalPemasukan: number;
+  totalPengeluaran: number;
+  saldo: number;
+  pemasukanDetail: { type: string; total: number }[];
+  pengeluaranDetail: Transaction[];
+  transactions: Transaction[];
+}> {
+  // Ramadhan period: Feb 1 - Apr 10 (approximate for 2026)
+  const startDate = `${year}-02-01`;
+  const endDate = `${year}-04-10`;
+
+  const rows = await db
+    .select()
+    .from(transactions)
+    .where(sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`)
+    .orderBy(transactions.date);
+
+  const txList = rows.map(asTransaction);
+
+  const pemasukanMap = new Map<string, number>();
+  const pengeluaranList: Transaction[] = [];
+  let totalPemasukan = 0;
+  let totalPengeluaran = 0;
+
+  for (const tx of txList) {
+    if (tx.type === 'pengeluaran') {
+      totalPengeluaran += tx.amount;
+      pengeluaranList.push(tx);
+    } else {
+      totalPemasukan += tx.amount;
+      pemasukanMap.set(tx.type, (pemasukanMap.get(tx.type) ?? 0) + tx.amount);
+    }
+  }
+
+  return {
+    year,
+    periode: `${startDate} s/d ${endDate}`,
+    totalPemasukan,
+    totalPengeluaran,
+    saldo: totalPemasukan - totalPengeluaran,
+    pemasukanDetail: Array.from(pemasukanMap.entries()).map(([type, total]) => ({ type, total })),
+    pengeluaranDetail: pengeluaranList,
+    transactions: txList,
+  };
+}
+
+export async function getQurbanReport(year: number): Promise<{
+  year: number;
+  periode: string;
+  tiers: QurbanTier[];
+  totalOperasional: number;
+  transactions: Transaction[];
+}> {
+  // Qurban period: Jun 1 - Jun 20 (around Idul Adha)
+  const startDate = `${year}-06-01`;
+  const endDate = `${year}-06-20`;
+
+  const tiers = await db
+    .select()
+    .from(qurbanTiers)
+    .where(eq(qurbanTiers.isActive, true))
+    .orderBy(qurbanTiers.sortOrder);
+
+  const txRows = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        sql`${transactions.date} BETWEEN ${startDate} AND ${endDate}`,
+        sql`${transactions.type} = 'sedekah'`
+      )
+    )
+    .orderBy(transactions.date);
+
+  const txList = txRows.map(asTransaction);
+  const totalOperasional = txList.reduce((s, t) => s + t.amount, 0);
+
+  return {
+    year,
+    periode: `${startDate} s/d ${endDate}`,
+    tiers: tiers.map(asQurbanTier),
+    totalOperasional,
+    transactions: txList,
   };
 }
 

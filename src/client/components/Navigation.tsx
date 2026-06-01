@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { Menu, X, Landmark } from 'lucide-preact';
+import { Menu, X, Landmark, LogIn } from 'lucide-preact';
+import { useAuth } from '../hooks/useAuth';
 
 const links = [
   { label: 'Beranda', href: '#beranda' },
@@ -14,6 +15,7 @@ const links = [
 export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -41,6 +43,18 @@ export function Navigation() {
               </a>
             </li>
           ))}
+          <li>
+            {user ? (
+              <a href="/admin" class="nav__link nav__link--admin" onClick={() => setMenuOpen(false)}>
+                Dashboard
+              </a>
+            ) : (
+              <a href="/login" class="nav__link nav__link--login" onClick={() => setMenuOpen(false)}>
+                <LogIn size={14} />
+                Login
+              </a>
+            )}
+          </li>
         </ul>
 
         <button
