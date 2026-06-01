@@ -179,14 +179,14 @@ async function seed() {
     // 8. ACTIVITIES — Kegiatan masjid
     // ============================================================
     const activitiesData: [string, string, string, string, boolean][] = [
-      ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban Idul Adha. Pendaftaran dibuka sampai 10 Juni. Sapi 1/7: Rp 2.500.000, Kambing: Rp 2.200.000.', '/images/kurban-sapi.webp', true],
-      ['Santunan Anak Yatim & Dhuafa', '2026-06-20', 'Santunan untuk anak yatim dan kaum dhuafa di sekitar masjid. Terbuka untuk donatur.', '/images/santunan-yatim.webp', true],
-      ['Peringatan Isra Mi\'raj', '2026-07-01', 'Peringatan Isra Mi\'raj Nabi Muhammad SAW. Khotib: Ust. Ahmad Fauzi. Dilanjutkan makan bersama.', 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=600&h=400&fit=crop', true],
-      ['Tabligh Akbar', '2026-07-05', 'Tabligh Akbar bersama Ust. Abdul Somad. Terbuka untuk umum. Parkir tersedia di halaman masjid.', 'https://images.unsplash.com/photo-1591604129939-f1efa4d99f7e?w=600&h=400&fit=crop', true],
-      ['Pesantren Kilat Ramadhan', '2026-07-15', 'Pesantren kilat untuk anak-anak usia 7-15 tahun. Pendaftaran di sekretariat masjid.', 'https://images.unsplash.com/photo-1585036156171-384160a4fd26?w=600&h=400&fit=crop', true],
-      ['Pembagian Zakat Fitrah', '2026-06-25', 'Pembagian zakat fitrah kepada mustahik. Dibagikan H-1 Idul Fitri.', 'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=600&h=400&fit=crop', true],
-      ['Peringatan Maulid Nabi', '2026-08-10', 'Peringatan Maulid Nabi Muhammad SAW. Maulid Akbar dengan pembacaan barzanji dan sirah nabawiyah.', 'https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=600&h=400&fit=crop', true],
-      ['Rapat Pengurus Bulanan', '2026-06-01', 'Rapat koordinasi pengurus masjid. Agenda: evaluasi keuangan dan program kerja.', 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop', false],
+      ['Pengajian Selapanan Ahad Kliwonan', '2026-06-08', 'Pengajian umum tingkat dusun dengan penceramah dari luar desa. Silaturahmi warga se-Poncol.', null, true],
+      ['TPQ Al-Ikhlas (Anak-anak)', '2026-06-01', 'Belajar mengaji untuk anak-anak dukuh setiap sore Senin-Jumat. Terbuka untuk usia 4-12 tahun.', null, true],
+      ['Santunan Anak Yatim & Dhuafa', '2026-06-20', 'Penyaluran dana santunan dari kas sedekah masjid untuk warga dukuh yang membutuhkan.', null, true],
+      ['Megengan Menjelang Ramadhan', '2026-06-25', 'Kenduri doa bersama warga membawa ambengan (makanan) untuk menyambut bulan puasa.', null, true],
+      ['Kerja Bakti Bersih Masjid', '2026-06-15', 'Gotong royong warga membersihkan masjid, tempat wudhu, dan area sekitar. Setiap Ahad pagi.', null, true],
+      ['Takbiran Keliling Dusun', '2026-06-26', 'Takbiran keliling dusun dengan obor dan pengeras suara menyambut Hari Raya Idul Fitri.', null, true],
+      ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban. Kerja bakti penyembelihan dan pendistribusian daging ke seluruh KK di dukuh.', null, true],
+      ['Rapat Pengurus & Tokoh RT', '2026-06-01', 'Musyawarah bulanan evaluasi kas masjid, laporan jimpitan, dan rencana kegiatan.', null, false],
     ];
 
     for (const [title, eventDate, description, imageUrl, isActive] of activitiesData) {

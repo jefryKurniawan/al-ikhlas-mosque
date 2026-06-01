@@ -17,6 +17,7 @@ import {
 } from 'lucide-preact';
 import { useApi } from '../hooks/useApi';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useCountUp } from '../hooks/useCountUp';
 import { PrayerTimeCard } from '../components/PrayerTimeCard';
 import type { PrayerTime, Activity, QurbanTier } from '../../shared/types';
 import s from '../styles/landing.module.css';
@@ -155,6 +156,19 @@ function PrayerSection({
 }
 
 /* ========== About ========== */
+function StatItem({ end, suffix = '', label }: { end: number; suffix?: string; label: string }) {
+  const { count, ref } = useCountUp(end);
+
+  return (
+    <div class={s.aboutStat}>
+      <span class={s.aboutStatNumber} ref={ref as never}>
+        {count}{suffix}
+      </span>
+      <span class={s.aboutStatLabel}>{label}</span>
+    </div>
+  );
+}
+
 function AboutSection() {
   const ref = useScrollReveal();
 
@@ -181,18 +195,9 @@ function AboutSection() {
         </div>
         <div class={s.aboutVisual}>
           <div class={s.aboutCard}>
-            <div class={s.aboutStat}>
-              <span class={s.aboutStatNumber}>5</span>
-              <span class={s.aboutStatLabel}>Waktu Sholat Berjamaah</span>
-            </div>
-            <div class={s.aboutStat}>
-              <span class={s.aboutStatNumber}>8+</span>
-              <span class={s.aboutStatLabel}>Kegiatan Rutin</span>
-            </div>
-            <div class={s.aboutStat}>
-              <span class={s.aboutStatNumber}>100%</span>
-              <span class={s.aboutStatLabel}>Transparansi Keuangan</span>
-            </div>
+            <StatItem end={5} label="Waktu Sholat Berjamaah" />
+            <StatItem end={8} suffix="+" label="Kegiatan Rutin" />
+            <StatItem end={100} suffix="%" label="Transparansi Keuangan" />
           </div>
         </div>
       </div>
@@ -215,9 +220,9 @@ function ActivitiesSection({
       <div class="container">
         <div class="section-header">
           <h2>
-            <CalendarDays size={24} /> Kegiatan Masjid
+            <CalendarDays size={24} /> Agenda Kegiatan
           </h2>
-          <p>Kegiatan rutin dan acara khusus yang diselenggarakan masjid</p>
+          <p>Kegiatan masjid dan warga dukuh Gonggang</p>
         </div>
 
         {loading && (
@@ -228,21 +233,19 @@ function ActivitiesSection({
         )}
 
         {activities && activities.length > 0 && (
-          <div class={s.activityGrid}>
+          <div class={s.timeline}>
             {activities.map(a => (
-              <div key={a.id} class={`card ${s.activityCard}`}>
-                {a.imageUrl && (
-                  <div class={s.activityImage}>
-                    <img src={a.imageUrl} alt={a.title} loading="lazy" />
-                  </div>
-                )}
-                <div class={s.activityContent}>
-                  <div class={s.activityDate}>
-                    <CalendarDays size={16} />
+              <div key={a.id} class={s.timelineItem}>
+                <div class={s.timelineDot}>
+                  <div class={s.timelineDotInner} />
+                </div>
+                <div class={s.timelineContent}>
+                  <div class={s.timelineDate}>
+                    <CalendarDays size={14} />
                     <span>{formatDate(a.eventDate)}</span>
                   </div>
-                  <h3 class={s.activityTitle}>{a.title}</h3>
-                  <p class={s.activityDesc}>{a.description}</p>
+                  <h3 class={s.timelineTitle}>{a.title}</h3>
+                  <p class={s.timelineDesc}>{a.description}</p>
                 </div>
               </div>
             ))}

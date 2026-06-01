@@ -274,15 +274,86 @@
   margin-bottom: var(--space-sm);
 }
 
-.activityTitle {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  margin-bottom: var(--space-sm);
-  color: var(--color-text);
+/* Timeline layout */
+.timeline {
+  max-width: 640px;
+  margin: 0 auto;
+  position: relative;
+  padding-left: 28px;
 }
 
-.activityDesc {
-  font-size: 14px;
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.timelineItem {
+  position: relative;
+  padding-bottom: var(--space-xl);
+}
+
+.timelineItem:last-child {
+  padding-bottom: 0;
+}
+
+.timelineDot {
+  position: absolute;
+  left: -28px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 2px solid var(--color-primary-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timelineDotInner {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.timelineContent {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: border-color 0.2s ease;
+}
+
+.timelineContent:hover {
+  border-color: var(--color-primary-muted);
+}
+
+.timelineDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-muted);
+  margin-bottom: 6px;
+}
+
+.timelineTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.timelineDesc {
+  font-size: 13px;
   color: var(--color-text-secondary);
   line-height: 1.6;
 }
@@ -301,27 +372,24 @@
 .donationCarousel {
   overflow: hidden;
   margin-bottom: var(--space-xl);
-  position: relative;
-  margin-left: calc(-1 * var(--space-xl));
-  margin-right: calc(-1 * var(--space-xl));
-  padding-left: var(--space-xl);
-  padding-right: var(--space-xl);
+  mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
 }
 
 .donationTrack {
   display: flex;
   gap: var(--space-lg);
-  animation: slideLoop 30s linear infinite;
   width: max-content;
+  animation: marquee 30s linear infinite;
 }
 
 .donationTrack:hover {
   animation-play-state: paused;
 }
 
-@keyframes slideLoop {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(-50% - var(--space-lg) / 2)); }
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - var(--space-lg) / 2)); }
 }
 
 .donationSlide {
@@ -813,8 +881,8 @@
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 
-  .activityGrid {
-    grid-template-columns: 1fr;
+  .timeline {
+    padding-left: 24px;
   }
 
   .qurbanGrid {
