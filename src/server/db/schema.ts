@@ -71,6 +71,21 @@ export const activities = mysqlTable('activities', {
 });
 
 // ============================================================
+// Zakat Recipients — Penerima zakat (internal only)
+// ============================================================
+
+export const zakatRecipients = mysqlTable('zakat_recipients', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  address: text('address'),
+  category: varchar('category', { length: 50 }).notNull(),
+  amount: int('amount').notNull(),
+  date: date('date').notNull(),
+  description: text('description'),
+  createdAt: datetime('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================
 // Type exports for use in application code
 // ============================================================
 
@@ -88,3 +103,6 @@ export type NewQurbanTier = typeof qurbanTiers.$inferInsert;
 
 export type Activity = typeof activities.$inferSelect;
 export type NewActivity = typeof activities.$inferInsert;
+
+export type ZakatRecipient = typeof zakatRecipients.$inferSelect;
+export type NewZakatRecipient = typeof zakatRecipients.$inferInsert;

@@ -117,6 +117,38 @@ export interface UpdateUserInput {
   role?: 'admin';
 }
 
+// --- Zakat Recipient Types ---
+export type ZakatRecipientCategory = 'fakir' | 'miskin' | 'mualaf' | 'gharim' | 'fisabilillah' | 'ibnu_sabil' | 'amil';
+
+export interface ZakatRecipient {
+  id: number;
+  name: string;
+  address: string | null;
+  category: ZakatRecipientCategory;
+  amount: number;
+  date: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface CreateZakatRecipientInput {
+  name: string;
+  address?: string;
+  category: ZakatRecipientCategory;
+  amount: number;
+  date: string;
+  description?: string;
+}
+
+export interface UpdateZakatRecipientInput {
+  name?: string;
+  address?: string;
+  category?: ZakatRecipientCategory;
+  amount?: number;
+  date?: string;
+  description?: string;
+}
+
 // --- API Response Types ---
 export interface ApiResponse<T> {
   success: true;

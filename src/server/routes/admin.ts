@@ -22,6 +22,10 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  getZakatRecipients,
+  createZakatRecipient,
+  updateZakatRecipient,
+  deleteZakatRecipient,
 } from '../db/queries.js';
 import { generateCsv, generateReportHtml } from '../lib/export.js';
 import { getDateRange } from '../../shared/date-range.js';
@@ -327,6 +331,66 @@ adminRoutes.delete('/users/:id', async (c) => {
   const deleted = await deleteUser(id);
   if (!deleted) return c.json({ success: false, error: 'User tidak ditemukan' }, 404);
   return c.json({ success: true, data: { message: 'User berhasil dihapus' } });
+});
+
+// --- Zakat Recipients CRUD (internal only) ---
+
+adminRoutes.get('/zakat-recipients', async (c) => {
+  const page = Number(c.req.query('page') ?? '1');
+  const limit = Number(c.req.query('limit') ?? '15');
+  const category = c.req.query('category');
+  const result = await getZakatRecipients(page, limit, category ?? undefined);
+  return c.json({ success: true, data: result });
+});
+
+adminRoutes.post(
+  '/zakat-recipients',
+  validateBody({
+    name: { type: 'string', required: true, min: 1, max: 255 },
+    category: { type: 'string', required: true, enum: ['fakir', 'miskin', 'mualaf', 'gharim', 'fisabilillah', 'ibnu_sabil', 'amil'] },
+    amount: { type: 'number', required: true, min: 0 },
+    date: { type: 'string', required: true },
+    address: { type: 'string', required: false },
+    description: { type: 'string', required: false },
+  }),
+  async (c) => {
+    const body = c.get('body') as {
+      name: string;
+      category: 'fakir' | 'miskin' | 'mualaf' | 'gharim' | 'fisabilillah' | 'ibnu_sabil' | 'amil';
+      amount: number;
+      date: string;
+      address?: string;
+      description?: string;
+    };
+    const recipient = await createZakatRecipient(body);
+    return c.json({ success: true, data: recipient }, 201);
+  }
+);
+
+adminRoutes.put(
+  '/zakat-recipients/:id',
+  validateBody({
+    name: { type: 'string', required: false, min: 1, max: 255 },
+    category: { type: 'string', required: false, enum: ['fakir', 'miskin', 'mualaf', 'gharim', 'fisabilillah', 'ibnu_sabil', 'amil'] },
+    amount: { type: 'number', required: false, min: 0 },
+    date: { type: 'string', required: false },
+    address: { type: 'string', required: false },
+    description: { type: 'string', required: false },
+  }),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    const body = c.get('body') as Record<string, unknown>;
+    const recipient = await updateZakatRecipient(id, body);
+    if (!recipient) return c.json({ success: false, error: 'Penerima tidak ditemukan' }, 404);
+    return c.json({ success: true, data: recipient });
+  }
+);
+
+adminRoutes.delete('/zakat-recipients/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  const deleted = await deleteZakatRecipient(id);
+  if (!deleted) return c.json({ success: false, error: 'Penerima tidak ditemukan' }, 404);
+  return c.json({ success: true, data: { message: 'Penerima berhasil dihapus' } });
 });
 
 export default adminRoutes;

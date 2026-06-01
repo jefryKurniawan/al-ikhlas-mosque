@@ -7,6 +7,8 @@ import {
   ChevronRight,
   Loader2,
   TrendingUp,
+  TrendingDown,
+  Scale,
   AlertCircle,
   ExternalLink,
   HelpCircle,
@@ -14,12 +16,15 @@ import {
   Phone,
   MessageCircle,
   Mail,
+  FileText,
+  Download,
+  Printer,
 } from 'lucide-preact';
 import { useApi } from '../hooks/useApi';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useCountUp } from '../hooks/useCountUp';
 import { PrayerTimeCard } from '../components/PrayerTimeCard';
-import type { PrayerTime, Activity, QurbanTier } from '../../shared/types';
+import type { PrayerTime, Activity, QurbanTier, ReportSummary, JimpitanReport, ZakatReport, RamadhanReport, QurbanReport } from '../../shared/types';
 import s from '../styles/landing.module.css';
 
 interface Props {
@@ -48,6 +53,7 @@ export function Landing(_props: Props) {
       <AboutSection />
       <ActivitiesSection activities={activities} loading={activitiesLoading} />
       <QurbanSection tiers={qurbanTiers} loading={qurbanLoading} />
+      <LaporanSection />
       <FAQSection />
       <LocationSection />
       <ContactSection />
@@ -371,6 +377,388 @@ function QurbanSection({
         )}
       </div>
     </section>
+  );
+}
+
+/* ========== Laporan Keuangan ========== */
+type ReportTab = 'bulanan' | 'jimpitan' | 'zakat' | 'ramadhan' | 'qurban';
+
+const REPORT_TABS: { key: ReportTab; label: string }[] = [
+  { key: 'bulanan', label: 'Ringkasan' },
+  { key: 'jimpitan', label: 'Jimpitan' },
+  { key: 'zakat', label: 'Zakat & Sedekah' },
+  { key: 'ramadhan', label: 'Ramadhan' },
+  { key: 'qurban', label: 'Qurban' },
+];
+
+function LaporanSection() {
+  const ref = useScrollReveal();
+  const [activeTab, setActiveTab] = useState<ReportTab>('bulanan');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Separate state for each report type
+  const [bulananData, setBulananData] = useState<ReportSummary | null>(null);
+  const [jimpitanData, setJimpitanData] = useState<JimpitanReport | null>(null);
+  const [zakatData, setZakatData] = useState<ZakatReport | null>(null);
+  const [ramadhanData, setRamadhanData] = useState<RamadhanReport | null>(null);
+  const [qurbanData, setQurbanData] = useState<QurbanReport | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+
+    const fetchReport = async () => {
+      try {
+        if (activeTab === 'bulanan') {
+          const res = await fetch('/api/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'bulanan', year, month }),
+          });
+          const json = await res.json();
+          if (!cancelled && json.success) setBulananData(json.data);
+        } else if (activeTab === 'jimpitan') {
+          const params = new URLSearchParams({ year: String(year), month: String(month) });
+          const res = await fetch(`/api/reports/jimpitan?${params}`);
+          const json = await res.json();
+          if (!cancelled && json.success) setJimpitanData(json.data);
+        } else if (activeTab === 'zakat') {
+          const res = await fetch(`/api/reports/zakat?year=${year}`);
+          const json = await res.json();
+          if (!cancelled && json.success) setZakatData(json.data);
+        } else if (activeTab === 'ramadhan') {
+          const res = await fetch(`/api/reports/ramadhan?year=${year}`);
+          const json = await res.json();
+          if (!cancelled && json.success) setRamadhanData(json.data);
+        } else if (activeTab === 'qurban') {
+          const res = await fetch(`/api/reports/qurban?year=${year}`);
+          const json = await res.json();
+          if (!cancelled && json.success) setQurbanData(json.data);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Gagal memuat laporan');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchReport();
+    return () => { cancelled = true; };
+  }, [activeTab, year, month]);
+
+  const handleDownloadCsv = () => {
+    const urls: Record<ReportTab, string> = {
+      bulanan: `/api/reports/csv`,
+      jimpitan: `/api/reports/jimpitan/csv?year=${year}&month=${month}`,
+      zakat: `/api/reports/zakat/csv?year=${year}`,
+      ramadhan: `/api/reports/ramadhan/csv?year=${year}`,
+      qurban: `/api/reports/qurban/csv?year=${year}`,
+    };
+    if (activeTab === 'bulanan') {
+      // POST needed for bulanan CSV
+      fetch('/api/reports/csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bulanan', year, month }),
+      })
+        .then(r => r.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `laporan-bulanan-${year}-${String(month).padStart(2, '0')}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+    } else {
+      window.open(urls[activeTab], '_blank');
+    }
+  };
+
+  const handlePrint = () => {
+    const urls: Record<ReportTab, string> = {
+      bulanan: `/api/reports/pdf`,
+      jimpitan: `/api/reports/jimpitan/html?year=${year}&month=${month}`,
+      zakat: `/api/reports/zakat/html?year=${year}`,
+      ramadhan: `/api/reports/ramadhan/html?year=${year}`,
+      qurban: `/api/reports/qurban/html?year=${year}`,
+    };
+    if (activeTab === 'bulanan') {
+      fetch('/api/reports/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bulanan', year, month }),
+      })
+        .then(r => r.text())
+        .then(html => {
+          const w = window.open('', '_blank');
+          if (w) {
+            w.document.write(html);
+            w.document.close();
+          }
+        });
+    } else {
+      window.open(urls[activeTab], '_blank');
+    }
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
+  const months = [
+    { value: 1, label: 'Januari' }, { value: 2, label: 'Februari' },
+    { value: 3, label: 'Maret' }, { value: 4, label: 'April' },
+    { value: 5, label: 'Mei' }, { value: 6, label: 'Juni' },
+    { value: 7, label: 'Juli' }, { value: 8, label: 'Agustus' },
+    { value: 9, label: 'September' }, { value: 10, label: 'Oktober' },
+    { value: 11, label: 'November' }, { value: 12, label: 'Desember' },
+  ];
+
+  const showMonth = activeTab === 'bulanan' || activeTab === 'jimpitan';
+
+  return (
+    <section id="laporan" class={`section ${s.laporan}`} ref={ref as never}>
+      <div class="container">
+        <div class="section-header">
+          <h2>
+            <FileText size={24} /> Laporan Keuangan
+          </h2>
+          <p>Transparansi keuangan masjid untuk jamaah</p>
+        </div>
+
+        {/* Tabs */}
+        <div class={s.reportTabs}>
+          {REPORT_TABS.map(tab => (
+            <button
+              key={tab.key}
+              class={`${s.reportTab}${activeTab === tab.key ? ` ${s.reportTabActive}` : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div class={s.reportFilters}>
+          <select
+            class={s.reportSelect}
+            value={year}
+            onChange={(e) => setYear(Number((e.target as HTMLSelectElement).value))}
+          >
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {showMonth && (
+            <select
+              class={s.reportSelect}
+              value={month}
+              onChange={(e) => setMonth(Number((e.target as HTMLSelectElement).value))}
+            >
+              {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div class={s.loader}>
+            <Loader2 size={24} class="spin" />
+            <span>Memuat laporan...</span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div class={s.errorBox}>
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Content per tab */}
+        {!loading && !error && (
+          <div class={s.reportContent}>
+            {activeTab === 'bulanan' && bulananData && <BulananReport data={bulananData} />}
+            {activeTab === 'jimpitan' && jimpitanData && <JimpitanReportView data={jimpitanData} />}
+            {activeTab === 'zakat' && zakatData && <ZakatReportView data={zakatData} />}
+            {activeTab === 'ramadhan' && ramadhanData && <RamadhanReportView data={ramadhanData} />}
+            {activeTab === 'qurban' && qurbanData && <QurbanReportView data={qurbanData} />}
+          </div>
+        )}
+
+        {/* Download actions */}
+        {!loading && !error && (
+          <div class={s.reportActions}>
+            <button class="btn btn-ghost" onClick={handleDownloadCsv}>
+              <Download size={16} /> Unduh CSV
+            </button>
+            <button class="btn btn-ghost" onClick={handlePrint}>
+              <Printer size={16} /> Cetak / PDF
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* Report sub-components */
+function StatCard({ icon: Icon, label, value, variant = 'default' }: {
+  icon: typeof TrendingUp;
+  label: string;
+  value: string;
+  variant?: 'default' | 'in' | 'out' | 'saldo';
+}) {
+  return (
+    <div class={s.reportStatCard}>
+      <div class={`${s.reportStatIcon}${variant !== 'default' ? ` ${s[`reportStat${variant.charAt(0).toUpperCase() + variant.slice(1)}`]}` : ''}`}>
+        <Icon size={20} />
+      </div>
+      <div class={s.reportStatInfo}>
+        <span class={s.reportStatLabel}>{label}</span>
+        <span class={s.reportStatValue}>{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function BulananReport({ data }: { data: ReportSummary }) {
+  const totalPemasukan = Object.values(data.pemasukan).reduce((a, b) => a + b, 0);
+  return (
+    <>
+      <div class={s.reportStatsGrid}>
+        <StatCard icon={TrendingUp} label="Total Pemasukan" value={formatCurrency(totalPemasukan)} variant="in" />
+        <StatCard icon={TrendingDown} label="Total Pengeluaran" value={formatCurrency(data.pengeluaran)} variant="out" />
+        <StatCard icon={Scale} label="Saldo" value={formatCurrency(data.saldo)} variant="saldo" />
+      </div>
+      <div class={s.reportBreakdown}>
+        <div class={s.reportBreakdownCard}>
+          <h4 class={s.reportBreakdownTitle}>Pemasukan per Jenis</h4>
+          {(['jimpitan', 'hibah', 'zakat', 'sedekah'] as const).map(type => (
+            <div key={type} class={s.reportBreakdownRow}>
+              <span class={s.reportBreakdownLabel}>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+              <span class={s.reportBreakdownAmount}>{formatCurrency(data.pemasukan[type] ?? 0)}</span>
+            </div>
+          ))}
+        </div>
+        <div class={s.reportBreakdownCard}>
+          <h4 class={s.reportBreakdownTitle}>Pengeluaran per Kategori</h4>
+          {(['operasional', 'perawatan', 'sosial'] as const).map(cat => (
+            <div key={cat} class={s.reportBreakdownRow}>
+              <span class={s.reportBreakdownLabel}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+              <span class={s.reportBreakdownAmount}>{formatCurrency(data.pengeluaranPerKategori[cat] ?? 0)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function JimpitanReportView({ data }: { data: JimpitanReport }) {
+  return (
+    <>
+      <div class={s.reportStatsGrid}>
+        <StatCard icon={TrendingUp} label="Total Terkumpul" value={formatCurrency(data.totalKeseluruhan)} variant="in" />
+        <StatCard icon={FileText} label="Jumlah RT" value={`${data.recapPerRT.length} RT`} />
+      </div>
+      {data.recapPerRT.length > 0 && (
+        <div class={s.reportTableWrap}>
+          <h4 class={s.reportTableTitle}>Rekap Per RT</h4>
+          <table class={s.reportTable}>
+            <thead>
+              <tr><th>RT</th><th class={s.reportTableAmount}>Total</th></tr>
+            </thead>
+            <tbody>
+              {data.recapPerRT.map(r => (
+                <tr key={r.rt}>
+                  <td>{r.rt}</td>
+                  <td class={s.reportTableAmount}>{formatCurrency(r.total)}</td>
+                </tr>
+              ))}
+              <tr class={s.reportTableTotal}>
+                <td>Total</td>
+                <td class={s.reportTableAmount}>{formatCurrency(data.totalKeseluruhan)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ZakatReportView({ data }: { data: ZakatReport }) {
+  return (
+    <div class={s.reportStatsGrid}>
+      <StatCard icon={TrendingUp} label="Total Zakat" value={formatCurrency(data.totalZakat)} variant="in" />
+      <StatCard icon={TrendingUp} label="Total Sedekah" value={formatCurrency(data.totalSedekah)} variant="in" />
+      <StatCard icon={Scale} label="Total Keseluruhan" value={formatCurrency(data.totalKeseluruhan)} variant="saldo" />
+    </div>
+  );
+}
+
+function RamadhanReportView({ data }: { data: RamadhanReport }) {
+  return (
+    <>
+      <div class={s.reportStatsGrid}>
+        <StatCard icon={TrendingUp} label="Total Pemasukan" value={formatCurrency(data.totalPemasukan)} variant="in" />
+        <StatCard icon={TrendingDown} label="Total Pengeluaran" value={formatCurrency(data.totalPengeluaran)} variant="out" />
+        <StatCard icon={Scale} label="Saldo" value={formatCurrency(data.saldo)} variant="saldo" />
+      </div>
+      {data.pemasukanDetail.length > 0 && (
+        <div class={s.reportTableWrap}>
+          <h4 class={s.reportTableTitle}>Pemasukan per Jenis</h4>
+          <table class={s.reportTable}>
+            <thead>
+              <tr><th>Jenis</th><th class={s.reportTableAmount}>Jumlah</th></tr>
+            </thead>
+            <tbody>
+              {data.pemasukanDetail.map(d => (
+                <tr key={d.type}>
+                  <td>{d.type.charAt(0).toUpperCase() + d.type.slice(1)}</td>
+                  <td class={s.reportTableAmount}>{formatCurrency(d.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+function QurbanReportView({ data }: { data: QurbanReport }) {
+  return (
+    <>
+      {data.tiers.length > 0 && (
+        <div class={s.reportTableWrap}>
+          <h4 class={s.reportTableTitle}>Paket Qurban</h4>
+          <table class={s.reportTable}>
+            <thead>
+              <tr><th>Paket</th><th class={s.reportTableAmount}>Harga</th><th>Deskripsi</th></tr>
+            </thead>
+            <tbody>
+              {data.tiers.map(t => (
+                <tr key={t.id}>
+                  <td>{t.name}</td>
+                  <td class={s.reportTableAmount}>{formatCurrency(t.amount)}</td>
+                  <td>{t.description || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {data.totalOperasional > 0 && (
+        <div class={s.reportStatsGrid}>
+          <StatCard icon={TrendingDown} label="Dana Operasional Qurban" value={formatCurrency(data.totalOperasional)} variant="out" />
+        </div>
+      )}
+    </>
   );
 }
 

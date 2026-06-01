@@ -344,6 +344,27 @@
   margin-bottom: 6px;
 }
 
+.badgeRutin,
+.badgeBesar {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badgeRutin {
+  background: rgba(46, 111, 64, 0.12);
+  color: var(--color-primary-light);
+}
+
+.badgeBesar {
+  background: rgba(200, 120, 20, 0.12);
+  color: #b06c10;
+}
+
 .timelineTitle {
   font-family: var(--font-display);
   font-size: 1.05rem;
@@ -509,6 +530,255 @@
   font-size: 14px;
   color: var(--color-text-secondary);
   line-height: 1.6;
+}
+
+/* ===== Laporan Keuangan ===== */
+.laporan {
+  background: var(--color-bg-secondary);
+}
+
+.reportTabs {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+}
+
+.reportTab {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reportTab:hover {
+  border-color: var(--color-primary-muted);
+  color: var(--color-primary);
+}
+
+.reportTabActive {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.reportTabActive:hover {
+  background: var(--color-primary-light);
+  color: #fff;
+  border-color: var(--color-primary-light);
+}
+
+.reportFilters {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+  margin-bottom: var(--space-xl);
+}
+
+.reportSelect {
+  padding: 8px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.reportSelect:focus {
+  border-color: var(--color-primary-muted);
+}
+
+.reportContent {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.reportStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.reportStatCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s ease;
+}
+
+.reportStatCard:hover {
+  border-color: var(--color-primary-muted);
+}
+
+.reportStatIcon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  background: var(--color-primary-ghost);
+  color: var(--color-primary);
+}
+
+.reportStatIn {
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+}
+
+.reportStatOut {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.reportStatSaldo {
+  background: var(--color-primary-ghost);
+  color: var(--color-primary);
+}
+
+.reportStatInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reportStatLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reportStatValue {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.reportBreakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.reportBreakdownCard {
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+}
+
+.reportBreakdownTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.reportBreakdownRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.reportBreakdownLabel {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.reportBreakdownAmount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.reportTableWrap {
+  margin-bottom: var(--space-xl);
+}
+
+.reportTableTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-md);
+}
+
+.reportTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.reportTable th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.reportTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text);
+}
+
+.reportTable tbody tr:hover {
+  background: var(--color-bg-warm);
+}
+
+.reportTableAmount {
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.reportTableTotal {
+  font-weight: 700;
+  background: var(--color-bg-warm);
+}
+
+.reportTableTotal td {
+  border-top: 2px solid var(--color-border);
+  padding-top: 12px;
+}
+
+.reportActions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  margin-top: var(--space-xl);
 }
 
 /* ===== FAQ ===== */
@@ -897,6 +1167,174 @@
   color: #ef4444;
 }
 
+/* ===== Laporan Keuangan ===== */
+.laporan {
+  background: var(--color-bg-secondary);
+}
+
+.laporanStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.laporanStatCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.laporanStatCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.laporanStatIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.laporanStatIconIn {
+  background: rgba(46, 111, 64, 0.1);
+  color: var(--color-primary-light);
+}
+
+.laporanStatIconOut {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.laporanStatIconSaldo {
+  background: rgba(200, 169, 96, 0.12);
+  color: var(--color-accent-gold);
+}
+
+.laporanStatInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.laporanStatLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.laporanStatValue {
+  font-family: var(--font-body);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.laporanBreakdown {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.laporanBreakdownCard {
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.laporanBreakdownTitle {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-md);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.laporanBreakdownList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.laporanBreakdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.laporanBreakdownAmount {
+  font-weight: 500;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.laporanBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.laporanBadgeJimpitan {
+  background: rgba(46, 111, 64, 0.1);
+  color: var(--color-primary-light);
+}
+
+.laporanBadgeHibah {
+  background: rgba(200, 169, 96, 0.12);
+  color: #92710c;
+}
+
+.laporanBadgeZakat {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.laporanBadgeSedekah {
+  background: rgba(168, 85, 247, 0.1);
+  color: #7c3aed;
+}
+
+.laporanBadgeOperasional {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.laporanBadgePerawatan {
+  background: rgba(234, 88, 12, 0.1);
+  color: #ea580c;
+}
+
+.laporanBadgeSosial {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+}
+
+.laporanActions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .hero {
@@ -931,6 +1369,23 @@
 
   .qurbanGrid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .reportTabs {
+    gap: 6px;
+  }
+
+  .reportTab {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+
+  .reportBreakdown {
+    grid-template-columns: 1fr;
+  }
+
+  .reportStatsGrid {
+    grid-template-columns: 1fr;
   }
 
   :global(.footer__inner) {

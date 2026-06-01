@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
 import type { ResultSetHeader } from 'mysql2/promise';
 import db from './index.js';
-import { transactions, qurbanTiers, activities, users } from './schema.js';
+import { transactions, qurbanTiers, activities, users, zakatRecipients } from './schema.js';
 import type {
   Transaction,
   CreateTransactionInput,
@@ -13,6 +13,9 @@ import type {
   User,
   CreateUserInput,
   UpdateUserInput,
+  ZakatRecipient,
+  CreateZakatRecipientInput,
+  UpdateZakatRecipientInput,
   PaginatedResponse,
 } from '../../shared/types.js';
 import { toTransactionId, toQurbanTierId, toActivityId, toUserId } from '../../shared/types.js';
@@ -635,6 +638,101 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
 
 export async function deleteUser(id: string): Promise<boolean> {
   const result = await db.delete(users).where(eq(users.id, id));
+  const header = result[0] as ResultSetHeader;
+  return header.affectedRows > 0;
+}
+
+// ============================================================
+// Zakat Recipients — Penerima zakat (internal only)
+// ============================================================
+
+function asZakatRecipient(row: typeof zakatRecipients.$inferSelect): ZakatRecipient {
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    category: row.category as ZakatRecipient['category'],
+    amount: row.amount,
+    date: dateStr(row.date),
+    description: row.description,
+    createdAt: dateStr(row.createdAt),
+  };
+}
+
+export async function getZakatRecipients(
+  page = 1,
+  limit = 15,
+  category?: string,
+): Promise<PaginatedResponse<ZakatRecipient>> {
+  const offset = (page - 1) * limit;
+
+  const conditions: SQL[] = [];
+  if (category) {
+    conditions.push(eq(zakatRecipients.category, category));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(zakatRecipients)
+    .where(where);
+  const total = countResult?.count ?? 0;
+
+  const rows = await db
+    .select()
+    .from(zakatRecipients)
+    .where(where)
+    .orderBy(desc(zakatRecipients.date))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    data: rows.map(asZakatRecipient),
+    total,
+    page,
+    limit,
+  };
+}
+
+export async function getZakatRecipientById(id: number): Promise<ZakatRecipient | null> {
+  const rows = await db.select().from(zakatRecipients).where(eq(zakatRecipients.id, id)).limit(1);
+  return rows[0] ? asZakatRecipient(rows[0]) : null;
+}
+
+export async function createZakatRecipient(input: CreateZakatRecipientInput): Promise<ZakatRecipient> {
+  const result = await db.insert(zakatRecipients).values({
+    name: input.name,
+    address: input.address ?? null,
+    category: input.category,
+    amount: input.amount,
+    date: new Date(input.date),
+    description: input.description ?? null,
+  });
+  const header = result[0] as ResultSetHeader;
+  const created = await getZakatRecipientById(header.insertId);
+  return created!;
+}
+
+export async function updateZakatRecipient(id: number, input: UpdateZakatRecipientInput): Promise<ZakatRecipient | null> {
+  const values: Record<string, unknown> = {};
+  if (input.name !== undefined) values.name = input.name;
+  if (input.address !== undefined) values.address = input.address;
+  if (input.category !== undefined) values.category = input.category;
+  if (input.amount !== undefined) values.amount = input.amount;
+  if (input.date !== undefined) values.date = input.date;
+  if (input.description !== undefined) values.description = input.description;
+
+  if (Object.keys(values).length === 0) {
+    return getZakatRecipientById(id);
+  }
+
+  await db.update(zakatRecipients).set(values).where(eq(zakatRecipients.id, id));
+  return getZakatRecipientById(id);
+}
+
+export async function deleteZakatRecipient(id: number): Promise<boolean> {
+  const result = await db.delete(zakatRecipients).where(eq(zakatRecipients.id, id));
   const header = result[0] as ResultSetHeader;
   return header.affectedRows > 0;
 }

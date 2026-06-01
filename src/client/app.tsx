@@ -10,6 +10,8 @@ import { Transactions } from './pages/admin/Transactions';
 import { QurbanTiers } from './pages/admin/QurbanTiers';
 import { Activities } from './pages/admin/Activities';
 import { Users } from './pages/admin/Users';
+import { Laporan } from './pages/admin/Laporan';
+import { ZakatRecipients } from './pages/admin/ZakatRecipients';
 import { Navigation } from './components/Navigation';
 import { Footer } from './components/Footer';
 
@@ -36,6 +38,8 @@ export function App() {
           <AdminRoute path="/admin/qurban" component={QurbanTiers} />
           <AdminRoute path="/admin/kegiatan" component={Activities} />
           <AdminRoute path="/admin/pengurus" component={Users} />
+          <AdminRoute path="/admin/laporan" component={Laporan} />
+          <AdminRoute path="/admin/penerima-zakat" component={ZakatRecipients} />
 
           {/* 404 */}
           <NotFound default />

@@ -7,6 +7,8 @@ import {
   Beef,
   CalendarDays,
   Users,
+  FileText,
+  Heart,
   LogOut,
   Menu,
   X,
@@ -29,6 +31,8 @@ const pages: AdminPage[] = [
   { key: 'qurban', label: 'Qurban & Sedekah', icon: Beef, path: '/admin/qurban' },
   { key: 'activities', label: 'Kegiatan', icon: CalendarDays, path: '/admin/kegiatan' },
   { key: 'users', label: 'Pengurus', icon: Users, path: '/admin/pengurus' },
+  { key: 'laporan', label: 'Laporan', icon: FileText, path: '/admin/laporan' },
+  { key: 'zakat-recipients', label: 'Penerima Zakat', icon: Heart, path: '/admin/penerima-zakat' },
 ];
 
 interface Props {

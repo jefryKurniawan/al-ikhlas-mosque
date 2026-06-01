@@ -8,6 +8,7 @@ const links = [
   { label: 'Jadwal Sholat', href: '#jadwal' },
   { label: 'Kegiatan', href: '#kegiatan' },
   { label: 'Donasi', href: '#qurban' },
+  { label: 'Laporan', href: '#laporan' },
   { label: 'Lokasi', href: '#lokasi' },
   { label: 'Kontak', href: '#kontak' },
 ];

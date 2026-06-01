@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
 import db, { pool } from './index.js';
-import { users } from './schema.js';
+import { users, zakatRecipients } from './schema.js';
 import { generateId } from '../lib/auth.js';
 import { hashPassword } from '../lib/password.js';
 import { eq, sql } from 'drizzle-orm';
@@ -68,6 +68,9 @@ async function seed() {
       ['2026-05-15', 390000, 'Jimpitan RT 01 Mei'],
       ['2026-05-15', 300000, 'Jimpitan RT 02 Mei'],
       ['2026-05-15', 450000, 'Jimpitan RT 03 Mei'],
+      ['2026-06-01', 355000, 'Jimpitan RT 01 Juni'],
+      ['2026-06-01', 285000, 'Jimpitan RT 02 Juni'],
+      ['2026-06-01', 435000, 'Jimpitan RT 03 Juni'],
     ];
 
     for (const [date, amount, description] of jimpitan) {
@@ -87,6 +90,7 @@ async function seed() {
       ['2026-03-05', 10000000, 'Hibah dari perusahaan', 'PT. Sejahtera Abadi'],
       ['2026-04-15', 3000000, 'Hibah untuk anak yatim', 'Bpk. Agus Widodo'],
       ['2026-05-01', 7500000, 'Hibah keluarga', 'Keluarga Bpk. Rahmat'],
+      ['2026-06-05', 4000000, 'Hibah untuk renovasi tempat wudhu', 'Bpk. Haryanto'],
     ];
 
     for (const [date, amount, description, donorName] of hibah) {
@@ -135,6 +139,8 @@ async function seed() {
       ['2026-04-10', 750000, 'Sedekah Ramadhan', null],
       ['2026-04-17', 1200000, 'Sedekah Ramadhan', null],
       ['2026-05-05', 400000, 'Sedekah Jumat', null],
+      ['2026-06-01', 320000, 'Sedekah Jumat', null],
+      ['2026-06-01', 500000, 'Sedekah umum', 'Hamba Allah'],
     ];
 
     for (const [date, amount, description, donorName] of sedekah) {
@@ -164,6 +170,8 @@ async function seed() {
       ['2026-05-01', 600000, 'Distribusi zakat fakir miskin', 'sosial'],
       ['2026-05-10', 1300000, 'Bayar listrik April', 'operasional'],
       ['2026-05-15', 1500000, 'Servis kipas angin masjid', 'perawatan'],
+      ['2026-06-01', 1350000, 'Bayar listrik Mei', 'operasional'],
+      ['2026-06-01', 400000, 'Bantuan fakir miskin dusun', 'sosial'],
     ];
 
     for (const [date, amount, description, category] of pengeluaran) {
@@ -222,6 +230,39 @@ async function seed() {
     // Summary
     // ============================================================
     const totalTx = jimpitan.length + hibah.length + zakat.length + sedekah.length + pengeluaran.length;
+    // ============================================================
+    // 6. ZAKAT RECIPIENTS — Penerima zakat (internal only)
+    // ============================================================
+    const [existingRecipients] = await conn.execute('SELECT COUNT(*) as cnt FROM zakat_recipients');
+    const recipientCount = (existingRecipients as unknown as Array<{ cnt: number }>)[0]?.cnt ?? 0;
+
+    if (recipientCount === 0) {
+      const recipientsData: Array<{ name: string; address: string; category: string; amount: number; date: string; description: string }> = [
+        { name: 'Ibu Sutinem', address: 'RT 01, Dukuh Krajan', category: 'fakir', amount: 500000, date: '2026-01-15', description: 'Janda lanjut usia, tidak memiliki penghasilan' },
+        { name: 'Bpk. Kasmin', address: 'RT 02, Dukuh Krajan', category: 'fakir', amount: 500000, date: '2026-01-15', description: 'Tidak mampu bekerja karena sakit kronis' },
+        { name: 'Ibu Rumiyati', address: 'RT 01, Dukuh Krajan', category: 'miskin', amount: 400000, date: '2026-02-10', description: 'Penghasilan tidak tetap, memiliki 3 anak kecil' },
+        { name: 'Bpk. Suharto', address: 'RT 03, Dukuh Krajan', category: 'miskin', amount: 400000, date: '2026-02-10', description: 'Buruh tani dengan penghasilan minim' },
+        { name: 'Bpk. Ahmad Fauzi', address: 'RT 02, Dukuh Krajan', category: 'mualaf', amount: 600000, date: '2026-03-01', description: 'Baru masuk Islam, masih belajar' },
+        { name: 'Ibu Siti Aminah', address: 'RT 01, Dukuh Krajan', category: 'gharim', amount: 750000, date: '2026-04-10', description: 'Memiliki hutang biaya rumah sakit' },
+        { name: 'Bpk. Wakidi', address: 'RT 03, Dukuh Krajan', category: 'fisabilillah', amount: 500000, date: '2026-04-15', description: 'Guru mengaji di TPQ masjid' },
+        { name: 'Bpk. Kardi', address: 'RT 02, Dukuh Krajan', category: 'ibnu_sabil', amount: 300000, date: '2026-05-01', description: 'Musafir dalam perjalanan, kehabisan bekal' },
+      ];
+
+      for (const r of recipientsData) {
+        await db.insert(zakatRecipients).values({
+          name: r.name,
+          address: r.address,
+          category: r.category,
+          amount: r.amount,
+          date: new Date(r.date),
+          description: r.description,
+        });
+      }
+      console.log(`Zakat Recipients: ${recipientsData.length} penerima`);
+    } else {
+      console.log(`Zakat Recipients: already has ${recipientCount} records, skipping.`);
+    }
+
     console.log('\n=== Seed Summary ===');
     console.log('Users: 2 (admin, bendahara)');
     console.log(`Transactions: ${totalTx} total`);
