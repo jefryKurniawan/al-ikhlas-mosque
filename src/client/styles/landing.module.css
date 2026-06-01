@@ -1,0 +1,863 @@
+/* ===== Hero ===== */
+.hero {
+  position: relative;
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: linear-gradient(160deg, #F7F8F7 0%, #FAFAF8 40%, #F0F4F1 100%);
+}
+
+.heroPattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 40px,
+      var(--color-primary) 40px,
+      var(--color-primary) 41px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 40px,
+      var(--color-primary) 40px,
+      var(--color-primary) 41px
+    );
+  pointer-events: none;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  padding-top: 120px;
+  padding-bottom: 80px;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: var(--color-primary-ghost);
+  border: 1px solid rgba(28, 59, 36, 0.1);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-lg);
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 0.95;
+  color: var(--color-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-lg);
+}
+
+.heroSubtitle {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  color: var(--color-text-secondary);
+  max-width: 480px;
+  line-height: 1.7;
+  margin-bottom: var(--space-xl);
+}
+
+.heroActions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+/* ===== Prayer Times ===== */
+.prayer {
+  background: var(--color-bg);
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-3xl);
+  color: var(--color-text-muted);
+}
+
+.errorBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  justify-content: center;
+  padding: var(--space-lg);
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: var(--radius-md);
+  border: 1px solid #fecaca;
+}
+
+.prayerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-md);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Prayer card styling (used by PrayerTimeCard) */
+:global(.prayer-card) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  transition: all 0.2s ease;
+}
+
+:global(.prayer-card:hover) {
+  border-color: var(--color-primary-muted);
+  box-shadow: var(--shadow-glow);
+}
+
+:global(.prayer-card--next) {
+  border-color: var(--color-primary-muted);
+  background: linear-gradient(135deg, rgba(28, 59, 36, 0.03), rgba(61, 139, 90, 0.06));
+}
+
+:global(.prayer-card__icon) {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-ghost);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+:global(.prayer-card__info) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+:global(.prayer-card__name) {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+:global(.prayer-card__time) {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--color-text);
+}
+
+:global(.prayer-card__badge) {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(61, 139, 90, 0.12);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* ===== About ===== */
+.about {
+  background: var(--color-bg-warm);
+}
+
+.aboutGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3xl);
+  align-items: center;
+}
+
+.aboutContent h2 {
+  margin-bottom: var(--space-lg);
+}
+
+.aboutContent p {
+  margin-bottom: var(--space-md);
+  line-height: 1.8;
+}
+
+.aboutContent .btn {
+  margin-top: var(--space-md);
+}
+
+.aboutCard {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.aboutStat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.aboutStatNumber {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--color-primary);
+  line-height: 1;
+  min-width: 80px;
+}
+
+.aboutStatLabel {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* ===== Activities ===== */
+.activities {
+  background: var(--color-bg-secondary);
+}
+
+.activityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-lg);
+}
+
+.activityCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.activityImage {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+}
+
+.activityImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.activityCard:hover .activityImage img {
+  transform: scale(1.05);
+}
+
+.activityContent {
+  padding: var(--space-lg);
+}
+
+.activityDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-primary-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.activityTitle {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin-bottom: var(--space-sm);
+  color: var(--color-text);
+}
+
+.activityDesc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: var(--space-3xl);
+}
+
+/* ===== Qurban ===== */
+.qurban {
+  background: var(--color-bg);
+}
+
+.donationCarousel {
+  overflow: hidden;
+  margin-bottom: var(--space-xl);
+  position: relative;
+  margin-left: calc(-1 * var(--space-xl));
+  margin-right: calc(-1 * var(--space-xl));
+  padding-left: var(--space-xl);
+  padding-right: var(--space-xl);
+}
+
+.donationTrack {
+  display: flex;
+  gap: var(--space-lg);
+  animation: slideLoop 30s linear infinite;
+  width: max-content;
+}
+
+.donationTrack:hover {
+  animation-play-state: paused;
+}
+
+@keyframes slideLoop {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - var(--space-lg) / 2)); }
+}
+
+.donationSlide {
+  flex: 0 0 360px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  aspect-ratio: 16/10;
+}
+
+.donationSlide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.donationSlide:hover img {
+  transform: scale(1.05);
+}
+
+.donationOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 40%, transparent 70%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--space-lg);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.donationSlide:hover .donationOverlay {
+  opacity: 1;
+}
+
+.donationBadge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.donationOverlay h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: white;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.donationOverlay p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.4;
+}
+
+.qurbanGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-lg);
+}
+
+.qurbanCard {
+  text-align: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.qurbanImage {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+}
+
+.qurbanImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.qurbanCard:hover .qurbanImage img {
+  transform: scale(1.05);
+}
+
+.qurbanContent {
+  padding: var(--space-xl);
+}
+
+.qurbanName {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: var(--space-md);
+  color: var(--color-text);
+}
+
+.qurbanPrice {
+  margin-bottom: var(--space-md);
+}
+
+.qurbanAmount {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  color: var(--color-primary);
+}
+
+.qurbanDesc {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* ===== FAQ ===== */
+.faq {
+  background: var(--color-bg-secondary);
+}
+
+.faqList {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.faqItem {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.faqItemOpen {
+  border-color: var(--color-primary-muted);
+}
+
+.faqQuestion {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text);
+  text-align: left;
+  line-height: 1.5;
+}
+
+.faqQuestion:hover {
+  color: var(--color-primary);
+}
+
+.faqChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.faqItemOpen .faqChevron {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+
+.faqAnswer {
+  padding: 0 var(--space-lg) var(--space-lg);
+  animation: fadeInDown 0.2s ease;
+}
+
+.faqAnswer p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Location ===== */
+.location {
+  background: var(--color-bg-warm);
+}
+
+.locationGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3xl);
+  align-items: start;
+}
+
+.locationInfo h2 {
+  margin-bottom: var(--space-xl);
+}
+
+.locationAddress {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+  color: var(--color-text-secondary);
+}
+
+.locationAddress strong {
+  display: block;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.locationAddress p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.locationMap {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* ===== Contact ===== */
+.contact {
+  background: var(--color-bg);
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-lg);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.contactCard {
+  text-align: center;
+  padding: var(--space-xl);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.contactCard:hover {
+  border-color: var(--color-primary-muted);
+  transform: translateY(-2px);
+}
+
+.contactCardIcon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-ghost);
+  border-radius: var(--radius-full);
+  color: var(--color-primary);
+  margin: 0 auto var(--space-md);
+}
+
+.contactCardTitle {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--color-text);
+  margin-bottom: var(--space-sm);
+}
+
+.contactCardValue {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.contactCardValue:hover {
+  color: var(--color-primary-light);
+}
+
+.mapPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  height: 300px;
+  background: var(--color-bg-secondary);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+}
+
+.mapPlaceholder p {
+  font-size: 14px;
+}
+
+/* ===== Nav (global styles) ===== */
+:global(.nav) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 16px 0;
+  transition: all 0.3s ease;
+}
+
+:global(.nav--scrolled) {
+  background: rgba(254, 254, 254, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: 10px 0;
+}
+
+:global(.nav__inner) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+:global(.nav__brand) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+:global(.nav__links) {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+
+:global(.nav__link) {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  position: relative;
+}
+
+:global(.nav__link:hover) {
+  color: var(--color-primary);
+}
+
+:global(.nav__link::after) {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary);
+  transition: width 0.2s ease;
+}
+
+:global(.nav__link:hover::after) {
+  width: 100%;
+}
+
+:global(.nav__toggle) {
+  display: none;
+  color: var(--color-text);
+}
+
+/* ===== Footer (global styles) ===== */
+:global(.footer) {
+  background: var(--color-primary);
+  color: rgba(255, 255, 255, 0.8);
+  padding-top: var(--space-3xl);
+}
+
+:global(.footer__inner) {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-3xl);
+  padding-bottom: var(--space-3xl);
+}
+
+:global(.footer__logo) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: var(--space-md);
+}
+
+:global(.footer__desc) {
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 320px;
+}
+
+:global(.footer__heading) {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: var(--space-md);
+}
+
+:global(.footer__links ul) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+:global(.footer__links a) {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+:global(.footer__links a:hover) {
+  color: #fff;
+}
+
+:global(.footer__bottom) {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-md) 0;
+}
+
+:global(.footer__bottom p) {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:global(.footer__heart) {
+  color: #ef4444;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .hero {
+    min-height: 80vh;
+  }
+
+  .heroTitle {
+    font-size: clamp(2.5rem, 10vw, 4rem);
+  }
+
+  .aboutGrid,
+  .locationGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  .donationSlide {
+    flex: 0 0 260px;
+  }
+
+  .donationOverlay {
+    opacity: 1;
+  }
+
+  .prayerGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .activityGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .qurbanGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  :global(.footer__inner) {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+
+  :global(.nav__links) {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(254, 254, 254, 0.98);
+    backdrop-filter: blur(16px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    z-index: 99;
+  }
+
+  :global(.nav__links--open) {
+    display: flex;
+  }
+
+  :global(.nav__links .nav__link) {
+    font-size: 1.25rem;
+  }
+
+  :global(.nav__toggle) {
+    display: block;
+    z-index: 101;
+  }
+}
+
+@media (max-width: 480px) {
+  .qurbanGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -55,6 +55,7 @@ export interface QurbanTier {
   name: string;
   amount: number;
   description: string;
+  imageUrl: string | null;
   sortOrder: number;
   isActive: boolean;
 }
@@ -63,6 +64,7 @@ export interface CreateQurbanTierInput {
   name: string;
   amount: number;
   description?: string;
+  imageUrl?: string;
   sortOrder?: number;
 }
 
@@ -72,6 +74,7 @@ export interface Activity {
   title: string;
   eventDate: string;
   description: string;
+  imageUrl: string | null;
   isActive: boolean;
 }
 
@@ -79,6 +82,7 @@ export interface CreateActivityInput {
   title: string;
   eventDate: string;
   description?: string;
+  imageUrl?: string;
 }
 
 // --- User Types ---

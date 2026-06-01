@@ -9,10 +9,9 @@ import { validateBody, reportSchema } from '../middleware/validate.js';
 
 const publicRoutes = new Hono<AppEnv>();
 
-// --- Prayer Times (proxy to Aladhan API, 1-hour cache) ---
-// Koordinat Poncol, Magetan, Jawa Timur
-const DEFAULT_LAT = -7.6643;
-const DEFAULT_LNG = 111.2872;
+// --- Prayer Times (proxy to MyQuran API, 1-hour cache) ---
+// City ID 1613 = KAB. MAGETAN (Kemenag)
+const MYQURAN_CITY_ID = '1613';
 
 interface CachedPrayerTimes {
   data: { name: string; time: string }[];
@@ -32,38 +31,37 @@ setInterval(() => {
 
 publicRoutes.get('/prayer-times', async (c) => {
   try {
-    const lat = c.req.query('lat') ?? String(DEFAULT_LAT);
-    const lng = c.req.query('lng') ?? String(DEFAULT_LNG);
-    const cacheKey = `${lat},${lng}`;
-    const now = Date.now();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const cacheKey = `${year}-${month}-${day}`;
 
     // Check cache
     const cached = prayerCache.get(cacheKey);
-    if (cached && now - cached.fetchedAt < PRAYER_CACHE_TTL) {
+    if (cached && now.getTime() - cached.fetchedAt < PRAYER_CACHE_TTL) {
       return c.json({ success: true, data: cached.data });
     }
 
-    // Method 11 = Kemenag (Kementerian Agama Republik Indonesia)
-    const response = await fetch(
-      `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=11`
-    );
+    const url = `https://api.myquran.com/v2/sholat/jadwal/${MYQURAN_CITY_ID}/${year}/${month}/${day}`;
+    const response = await fetch(url);
 
     if (!response.ok) throw new Error('Gagal mengambil jadwal sholat');
 
     const data = await response.json() as Record<string, unknown>;
-    const timings = (data['data'] as Record<string, unknown>)?.['timings'] as Record<string, string>;
+    const jadwal = (data['data'] as Record<string, unknown>)?.['jadwal'] as Record<string, string>;
 
     const prayerTimes = [
-      { name: 'Subuh', time: timings['Fajr'] ?? '-' },
-      { name: 'Terbit', time: timings['Sunrise'] ?? '-' },
-      { name: 'Dzuhur', time: timings['Dhuhr'] ?? '-' },
-      { name: 'Ashar', time: timings['Asr'] ?? '-' },
-      { name: 'Maghrib', time: timings['Maghrib'] ?? '-' },
-      { name: 'Isya', time: timings['Isha'] ?? '-' },
+      { name: 'Subuh', time: jadwal['subuh'] ?? '-' },
+      { name: 'Terbit', time: jadwal['terbit'] ?? '-' },
+      { name: 'Dzuhur', time: jadwal['dzuhur'] ?? '-' },
+      { name: 'Ashar', time: jadwal['ashar'] ?? '-' },
+      { name: 'Maghrib', time: jadwal['maghrib'] ?? '-' },
+      { name: 'Isya', time: jadwal['isya'] ?? '-' },
     ];
 
     // Update cache
-    prayerCache.set(cacheKey, { data: prayerTimes, fetchedAt: now });
+    prayerCache.set(cacheKey, { data: prayerTimes, fetchedAt: now.getTime() });
 
     return c.json({ success: true, data: prayerTimes });
   } catch (err) {

@@ -45,6 +45,7 @@ function asQurbanTier(row: typeof qurbanTiers.$inferSelect): QurbanTier {
     name: row.name,
     amount: row.amount,
     description: row.description ?? '',
+    imageUrl: row.imageUrl ?? null,
     sortOrder: row.sortOrder,
     isActive: Boolean(row.isActive),
   };
@@ -56,6 +57,7 @@ function asActivity(row: typeof activities.$inferSelect): Activity {
     title: row.title,
     eventDate: dateStr(row.eventDate),
     description: row.description ?? '',
+    imageUrl: row.imageUrl ?? null,
     isActive: Boolean(row.isActive),
   };
 }
@@ -191,6 +193,7 @@ export async function createQurbanTier(input: CreateQurbanTierInput): Promise<Qu
       name: input.name,
       amount: input.amount,
       description: input.description ?? '',
+      imageUrl: input.imageUrl ?? null,
       sortOrder: input.sortOrder ?? 0,
     })
     .$returningId();
@@ -204,6 +207,7 @@ export async function updateQurbanTier(id: number, input: Partial<CreateQurbanTi
   if (input.name !== undefined) values.name = input.name;
   if (input.amount !== undefined) values.amount = input.amount;
   if (input.description !== undefined) values.description = input.description;
+  if (input.imageUrl !== undefined) values.imageUrl = input.imageUrl;
   if (input.sortOrder !== undefined) values.sortOrder = input.sortOrder;
   if (input.isActive !== undefined) values.isActive = input.isActive;
 
@@ -264,6 +268,7 @@ export async function createActivity(input: CreateActivityInput): Promise<Activi
       title: input.title,
       eventDate: sql`${input.eventDate}`,
       description: input.description ?? '',
+      imageUrl: input.imageUrl ?? null,
     })
     .$returningId();
 
@@ -276,6 +281,7 @@ export async function updateActivity(id: number, input: Partial<CreateActivityIn
   if (input.title !== undefined) values.title = input.title;
   if (input.eventDate !== undefined) values.eventDate = input.eventDate;
   if (input.description !== undefined) values.description = input.description;
+  if (input.imageUrl !== undefined) values.imageUrl = input.imageUrl;
   if (input.isActive !== undefined) values.isActive = input.isActive;
 
   if (Object.keys(values).length === 0) {

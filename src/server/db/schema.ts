@@ -50,6 +50,7 @@ export const qurbanTiers = mysqlTable('qurban_tiers', {
   name: varchar('name', { length: 255 }).notNull(),
   amount: int('amount').notNull(),
   description: text('description'),
+  imageUrl: varchar('image_url', { length: 500 }),
   sortOrder: int('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
 });
@@ -63,6 +64,7 @@ export const activities = mysqlTable('activities', {
   title: varchar('title', { length: 255 }).notNull(),
   eventDate: date('event_date').notNull(),
   description: text('description'),
+  imageUrl: varchar('image_url', { length: 500 }),
   isActive: boolean('is_active').notNull().default(true),
 });
 

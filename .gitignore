@@ -31,3 +31,6 @@ npm-debug.log*
 
 # OpenClaude
 .openclaude/
+
+# Build artifacts
+tsconfig.tsbuildinfo

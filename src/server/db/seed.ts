@@ -156,21 +156,21 @@ async function seed() {
     // ============================================================
     // 7. QURBAN TIERS — Paket qurban & sedekah
     // ============================================================
-    const tiers: [string, number, string, number][] = [
-      ['Sapi 1/7', 2500000, 'Paket 1/7 bagian sapi qurban. Termasuk distribusi daging ke mustahik.', 1],
-      ['Sapi 1/1 (Utuh)', 17500000, 'Paket sapi qurban utuh. Cocok untuk kelompok/RT.', 2],
-      ['Kambing 1 Ekor', 2200000, 'Paket kambing qurban utuh.', 3],
-      ['Domba 1 Ekor', 2800000, 'Paket domba premium qurban.', 4],
-      ['Sedekah Qurban', 500000, 'Sedekah untuk pelaksanaan qurban (distribusi, operasional).', 5],
-      ['Sedekah Yatim', 100000, 'Paket sedekah untuk anak yatim piatu.', 6],
-      ['Sedekah Dhuafa', 150000, 'Paket sedekah untuk kaum dhuafa.', 7],
-      ['Paket Keluarga Qurban', 5000000, 'Paket qurban keluarga (1/7 sapi + sedekah yatim + sedekah dhuafa).', 8],
+    const tiers: [string, number, string, string, number][] = [
+      ['Sapi 1/7', 2500000, 'Paket 1/7 bagian sapi qurban. Termasuk distribusi daging ke mustahik.', 'https://images.unsplash.com/photo-1550640964-4939c20f4a95?w=600&h=400&fit=crop', 1],
+      ['Sapi 1/1 (Utuh)', 17500000, 'Paket sapi qurban utuh. Cocok untuk kelompok/RT.', 'https://images.unsplash.com/photo-1527153857715-3908f2bae5e8?w=600&h=400&fit=crop', 2],
+      ['Kambing 1 Ekor', 2200000, 'Paket kambing qurban utuh.', 'https://images.unsplash.com/photo-1583337130417-13104dec14a2?w=600&h=400&fit=crop', 3],
+      ['Domba 1 Ekor', 2800000, 'Paket domba premium qurban.', 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?w=600&h=400&fit=crop', 4],
+      ['Sedekah Qurban', 500000, 'Sedekah untuk pelaksanaan qurban (distribusi, operasional).', 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=600&h=400&fit=crop', 5],
+      ['Sedekah Yatim', 100000, 'Paket sedekah untuk anak yatim piatu.', 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=400&fit=crop', 6],
+      ['Sedekah Dhuafa', 150000, 'Paket sedekah untuk kaum dhuafa.', 'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=600&h=400&fit=crop', 7],
+      ['Paket Keluarga Qurban', 5000000, 'Paket qurban keluarga (1/7 sapi + sedekah yatim + sedekah dhuafa).', 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=600&h=400&fit=crop', 8],
     ];
 
-    for (const [name, amount, description, sortOrder] of tiers) {
+    for (const [name, amount, description, imageUrl, sortOrder] of tiers) {
       await conn.execute(
-        'INSERT INTO qurban_tiers (name, amount, description, sort_order) VALUES (?, ?, ?, ?)',
-        [name, amount, description, sortOrder]
+        'INSERT INTO qurban_tiers (name, amount, description, image_url, sort_order) VALUES (?, ?, ?, ?, ?)',
+        [name, amount, description, imageUrl, sortOrder]
       );
     }
     console.log(`Qurban tiers: ${tiers.length} records`);
@@ -178,21 +178,21 @@ async function seed() {
     // ============================================================
     // 8. ACTIVITIES — Kegiatan masjid
     // ============================================================
-    const activitiesData: [string, string, string, boolean][] = [
-      ['Sholat Jumat Berjamaah', '2026-06-05', 'Sholat Jumat dengan khotib undangan. Khotib: Ust. Ahmad Fauzi.', true],
-      ['Pengajian Rutin Sabtu Malam', '2026-06-07', 'Pengajian rutin Sabtu malam minggu pertama. Kitab: Riyadhus Shalihin.', true],
-      ['Buka Puasa Bersama', '2026-06-15', 'Buka puasa bersama warga RW 05. Kontribusi: nasi kotak.', true],
-      ['Santunan Anak Yatim', '2026-06-20', 'Santunan untuk 25 anak yatim piatu di sekitar masjid.', true],
-      ['Peringatan Isra Mi\'raj', '2026-07-01', 'Peringatan Isra Mi\'raj Nabi Muhammad SAW.', true],
-      ['Tadarus Al-Quran', '2026-07-10', 'Kegiatan tadarus Al-Quran bersama setiap bulan.', true],
-      ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban Idul Adha. Pendaftaran dibuka sampai 10 Juni.', true],
-      ['Rapat Pengurus Bulanan', '2026-06-01', 'Rapat koordinasi pengurus masjid. Agenda: evaluasi keuangan.', false],
+    const activitiesData: [string, string, string, string, boolean][] = [
+      ['Kurban Idul Adha 1447 H', '2026-06-17', 'Pelaksanaan kurban Idul Adha. Pendaftaran dibuka sampai 10 Juni. Sapi 1/7: Rp 2.500.000, Kambing: Rp 2.200.000.', '/images/kurban-sapi.webp', true],
+      ['Santunan Anak Yatim & Dhuafa', '2026-06-20', 'Santunan untuk anak yatim dan kaum dhuafa di sekitar masjid. Terbuka untuk donatur.', '/images/santunan-yatim.webp', true],
+      ['Peringatan Isra Mi\'raj', '2026-07-01', 'Peringatan Isra Mi\'raj Nabi Muhammad SAW. Khotib: Ust. Ahmad Fauzi. Dilanjutkan makan bersama.', 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=600&h=400&fit=crop', true],
+      ['Tabligh Akbar', '2026-07-05', 'Tabligh Akbar bersama Ust. Abdul Somad. Terbuka untuk umum. Parkir tersedia di halaman masjid.', 'https://images.unsplash.com/photo-1591604129939-f1efa4d99f7e?w=600&h=400&fit=crop', true],
+      ['Pesantren Kilat Ramadhan', '2026-07-15', 'Pesantren kilat untuk anak-anak usia 7-15 tahun. Pendaftaran di sekretariat masjid.', 'https://images.unsplash.com/photo-1585036156171-384160a4fd26?w=600&h=400&fit=crop', true],
+      ['Pembagian Zakat Fitrah', '2026-06-25', 'Pembagian zakat fitrah kepada mustahik. Dibagikan H-1 Idul Fitri.', 'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=600&h=400&fit=crop', true],
+      ['Peringatan Maulid Nabi', '2026-08-10', 'Peringatan Maulid Nabi Muhammad SAW. Maulid Akbar dengan pembacaan barzanji dan sirah nabawiyah.', 'https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=600&h=400&fit=crop', true],
+      ['Rapat Pengurus Bulanan', '2026-06-01', 'Rapat koordinasi pengurus masjid. Agenda: evaluasi keuangan dan program kerja.', 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop', false],
     ];
 
-    for (const [title, eventDate, description, isActive] of activitiesData) {
+    for (const [title, eventDate, description, imageUrl, isActive] of activitiesData) {
       await conn.execute(
-        'INSERT INTO activities (title, event_date, description, is_active) VALUES (?, ?, ?, ?)',
-        [title, eventDate, description, isActive]
+        'INSERT INTO activities (title, event_date, description, image_url, is_active) VALUES (?, ?, ?, ?, ?)',
+        [title, eventDate, description, imageUrl, isActive]
       );
     }
     console.log(`Activities: ${activitiesData.length} records`);
