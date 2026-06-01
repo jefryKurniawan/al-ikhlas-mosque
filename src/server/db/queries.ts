@@ -1,12 +1,13 @@
 import { eq, and, desc, sql, type SQL } from 'drizzle-orm';
 import type { ResultSetHeader } from 'mysql2/promise';
 import db from './index.js';
-import { transactions, qurbanTiers, activities, users, zakatRecipients } from './schema.js';
+import { transactions, qurbanTiers, qurbanDonors, activities, users, zakatRecipients } from './schema.js';
 import type {
   Transaction,
   CreateTransactionInput,
   UpdateTransactionInput,
   QurbanTier,
+  QurbanDonor,
   CreateQurbanTierInput,
   Activity,
   CreateActivityInput,
@@ -521,7 +522,7 @@ export async function getRamadhanReport(year: number): Promise<{
 export async function getQurbanReport(year: number): Promise<{
   year: number;
   periode: string;
-  tiers: QurbanTier[];
+  donors: QurbanDonor[];
   totalOperasional: number;
   transactions: Transaction[];
 }> {
@@ -529,11 +530,11 @@ export async function getQurbanReport(year: number): Promise<{
   const startDate = `${year}-06-01`;
   const endDate = `${year}-06-20`;
 
-  const tiers = await db
+  const donorRows = await db
     .select()
-    .from(qurbanTiers)
-    .where(eq(qurbanTiers.isActive, true))
-    .orderBy(qurbanTiers.sortOrder);
+    .from(qurbanDonors)
+    .where(eq(qurbanDonors.year, year))
+    .orderBy(qurbanDonors.animalType, qurbanDonors.id);
 
   const txRows = await db
     .select()
@@ -552,7 +553,15 @@ export async function getQurbanReport(year: number): Promise<{
   return {
     year,
     periode: `${startDate} s/d ${endDate}`,
-    tiers: tiers.map(asQurbanTier),
+    donors: donorRows.map(row => ({
+      id: row.id,
+      name: row.name,
+      animalType: row.animalType,
+      portion: row.portion,
+      amount: row.amount,
+      year: row.year,
+      createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    })),
     totalOperasional,
     transactions: txList,
   };

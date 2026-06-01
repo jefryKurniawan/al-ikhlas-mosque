@@ -253,11 +253,11 @@ export function generateQurbanHtml(report: QurbanReport): string {
   </div>
   <p class="periode">Periode: ${report.periode}</p>
 
-  <h2>Paket Qurban</h2>
+  <h2>Daftar Donatur Qurban</h2>
   <table>
-    <tr><th>Paket</th><th class="amount">Harga</th><th>Deskripsi</th></tr>
-    ${report.tiers.map(t =>
-      `<tr><td>${t.name}</td><td class="amount">${fmt(t.amount)}</td><td>${t.description ?? '-'}</td></tr>`
+    <tr><th>Nama</th><th>Jenis Hewan</th><th>Porsi</th><th class="amount">Jumlah</th></tr>
+    ${report.donors.map(d =>
+      `<tr><td>${d.name}</td><td>${d.animalType}</td><td>${d.portion}</td><td class="amount">${fmt(d.amount)}</td></tr>`
     ).join('')}
   </table>
 

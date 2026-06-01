@@ -228,10 +228,20 @@ export interface RamadhanReport {
   transactions: Transaction[];
 }
 
+export interface QurbanDonor {
+  id: number;
+  name: string;
+  animalType: string;
+  portion: string;
+  amount: number;
+  year: number;
+  createdAt: string;
+}
+
 export interface QurbanReport {
   year: number;
   periode: string;
-  tiers: QurbanTier[];
+  donors: QurbanDonor[];
   totalOperasional: number;
   transactions: Transaction[];
 }

@@ -9,7 +9,6 @@ import {
   getTransactions,
   getJimpitanReport,
   getZakatReport,
-  getRamadhanReport,
   getQurbanReport,
 } from '../db/queries.js';
 import {
@@ -17,7 +16,6 @@ import {
   generateReportHtml,
   generateJimpitanHtml,
   generateZakatHtml,
-  generateRamadhanHtml,
   generateQurbanHtml,
 } from '../lib/export.js';
 import { getDateRange } from '../../shared/date-range.js';
@@ -150,6 +148,23 @@ publicRoutes.post('/reports/pdf', validateBody(reportSchema), async (c) => {
 // Specialized Report Endpoints (Public)
 // ============================================================
 
+// --- Ringkasan (Bulanan) Report ---
+publicRoutes.get('/reports/bulanan', async (c) => {
+  const year = Number(c.req.query('year') ?? new Date().getFullYear());
+  const month = Number(c.req.query('month') ?? new Date().getMonth() + 1);
+
+  const { startDate, endDate } = getDateRange('bulanan', year, month);
+  const summary = await getReportSummary(startDate, endDate);
+
+  return c.json({
+    success: true,
+    data: {
+      ...summary,
+      periode: `${startDate} s/d ${endDate}`,
+    },
+  });
+});
+
 // --- Jimpitan Report ---
 publicRoutes.get('/reports/jimpitan', async (c) => {
   const year = Number(c.req.query('year') ?? new Date().getFullYear());
@@ -221,31 +236,6 @@ publicRoutes.get('/reports/zakat/html', async (c) => {
 });
 
 // --- Ramadhan Report ---
-publicRoutes.get('/reports/ramadhan', async (c) => {
-  const year = Number(c.req.query('year') ?? new Date().getFullYear());
-  const report = await getRamadhanReport(year);
-  return c.json({ success: true, data: report });
-});
-
-publicRoutes.get('/reports/ramadhan/csv', async (c) => {
-  const year = Number(c.req.query('year') ?? new Date().getFullYear());
-  const report = await getRamadhanReport(year);
-  const csv = generateCsv(report.transactions, false);
-
-  c.header('Content-Type', 'text/csv; charset=utf-8');
-  c.header('Content-Disposition', `attachment; filename="laporan-ramadhan-${year}.csv"`);
-  return c.body(csv);
-});
-
-publicRoutes.get('/reports/ramadhan/html', async (c) => {
-  const year = Number(c.req.query('year') ?? new Date().getFullYear());
-  const report = await getRamadhanReport(year);
-  const html = generateRamadhanHtml(report);
-
-  c.header('Content-Type', 'text/html; charset=utf-8');
-  return c.body(html);
-});
-
 // --- Qurban Report ---
 publicRoutes.get('/reports/qurban', async (c) => {
   const year = Number(c.req.query('year') ?? new Date().getFullYear());
@@ -257,9 +247,9 @@ publicRoutes.get('/reports/qurban/csv', async (c) => {
   const year = Number(c.req.query('year') ?? new Date().getFullYear());
   const report = await getQurbanReport(year);
 
-  // Custom CSV for qurban
-  const headers = ['Paket', 'Harga (Rp)', 'Deskripsi'];
-  const rows = report.tiers.map(t => `"${t.name}","${t.amount}","${t.description ?? ''}"`);
+  // Custom CSV for qurban donors
+  const headers = ['Nama', 'Jenis Hewan', 'Porsi', 'Jumlah (Rp)'];
+  const rows = report.donors.map(d => `"${d.name}","${d.animalType}","${d.portion}","${d.amount}"`);
   const csv = [headers.join(','), ...rows].join('\n');
 
   c.header('Content-Type', 'text/csv; charset=utf-8');
@@ -285,7 +275,6 @@ publicRoutes.get('/reports', (c) => {
       { type: 'tahunan', label: 'Laporan Tahunan', params: 'year' },
       { type: 'jimpitan', label: 'Laporan Jimpitan', params: 'year, month (opsional)' },
       { type: 'zakat', label: 'Laporan Zakat & Sedekah', params: 'year' },
-      { type: 'ramadhan', label: 'Laporan Ramadhan', params: 'year' },
       { type: 'qurban', label: 'Laporan Idul Adha & Qurban', params: 'year' },
     ],
   });

@@ -56,6 +56,23 @@ export const qurbanTiers = mysqlTable('qurban_tiers', {
 });
 
 // ============================================================
+// Qurban Donors — Donatur qurban
+// ============================================================
+
+export const qurbanDonors = mysqlTable('qurban_donors', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  animalType: varchar('animal_type', { length: 50 }).notNull(), // 'sapi', 'kambing', 'domba'
+  portion: varchar('portion', { length: 20 }).notNull(), // '1/7', '1/1', '1'
+  amount: int('amount').notNull(),
+  year: int('year').notNull(),
+  createdAt: datetime('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export type QurbanDonor = typeof qurbanDonors.$inferSelect;
+export type NewQurbanDonor = typeof qurbanDonors.$inferInsert;
+
+// ============================================================
 // Activities — Kegiatan masjid
 // ============================================================
 

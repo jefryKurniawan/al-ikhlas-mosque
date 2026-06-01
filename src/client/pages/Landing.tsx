@@ -17,14 +17,12 @@ import {
   MessageCircle,
   Mail,
   FileText,
-  Download,
-  Printer,
 } from 'lucide-preact';
 import { useApi } from '../hooks/useApi';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useCountUp } from '../hooks/useCountUp';
 import { PrayerTimeCard } from '../components/PrayerTimeCard';
-import type { PrayerTime, Activity, QurbanTier, ReportSummary, JimpitanReport, ZakatReport, RamadhanReport, QurbanReport } from '../../shared/types';
+import type { PrayerTime, Activity, ReportSummary, JimpitanReport, ZakatReport, QurbanReport } from '../../shared/types';
 import s from '../styles/landing.module.css';
 
 interface Props {
@@ -38,9 +36,6 @@ export function Landing(_props: Props) {
   const { data: activities, loading: activitiesLoading } = useApi<Activity[]>(
     '/api/activities'
   );
-  const { data: qurbanTiers, loading: qurbanLoading } = useApi<QurbanTier[]>(
-    '/api/qurban-tiers'
-  );
 
   return (
     <div class="page-enter">
@@ -52,7 +47,7 @@ export function Landing(_props: Props) {
       />
       <AboutSection />
       <ActivitiesSection activities={activities} loading={activitiesLoading} />
-      <QurbanSection tiers={qurbanTiers} loading={qurbanLoading} />
+      <QurbanSection />
       <LaporanSection />
       <FAQSection />
       <LocationSection />
@@ -275,13 +270,7 @@ function ActivitiesSection({
 }
 
 /* ========== Qurban ========== */
-function QurbanSection({
-  tiers,
-  loading,
-}: {
-  tiers: QurbanTier[] | null;
-  loading: boolean;
-}) {
+function QurbanSection() {
   const ref = useScrollReveal();
 
   return (
@@ -345,57 +334,26 @@ function QurbanSection({
             </div>
           </div>
         </div>
-
-        {loading && (
-          <div class={s.loader}>
-            <Loader2 size={24} class="spin" />
-            <span>Memuat paket...</span>
-          </div>
-        )}
-
-        {tiers && tiers.length > 0 && (
-          <div class={s.qurbanGrid}>
-            {tiers.map(t => (
-              <div key={t.id} class={`card ${s.qurbanCard}`}>
-                {t.imageUrl && (
-                  <div class={s.qurbanImage}>
-                    <img src={t.imageUrl} alt={t.name} loading="lazy" />
-                  </div>
-                )}
-                <div class={s.qurbanContent}>
-                  <h3 class={s.qurbanName}>{t.name}</h3>
-                  <div class={s.qurbanPrice}>
-                    <span class={s.qurbanAmount}>
-                      {formatCurrency(t.amount)}
-                    </span>
-                  </div>
-                  <p class={s.qurbanDesc}>{t.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </section>
   );
 }
 
 /* ========== Laporan Keuangan ========== */
-type ReportTab = 'bulanan' | 'jimpitan' | 'zakat' | 'ramadhan' | 'qurban';
+type ReportTab = 'bulanan' | 'jimpitan' | 'zakat' | 'qurban';
 
 const REPORT_TABS: { key: ReportTab; label: string }[] = [
   { key: 'bulanan', label: 'Ringkasan' },
   { key: 'jimpitan', label: 'Jimpitan' },
   { key: 'zakat', label: 'Zakat & Sedekah' },
-  { key: 'ramadhan', label: 'Ramadhan' },
   { key: 'qurban', label: 'Qurban' },
 ];
 
 function LaporanSection() {
   const ref = useScrollReveal();
   const [activeTab, setActiveTab] = useState<ReportTab>('bulanan');
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth() + 1;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -403,7 +361,6 @@ function LaporanSection() {
   const [bulananData, setBulananData] = useState<ReportSummary | null>(null);
   const [jimpitanData, setJimpitanData] = useState<JimpitanReport | null>(null);
   const [zakatData, setZakatData] = useState<ZakatReport | null>(null);
-  const [ramadhanData, setRamadhanData] = useState<RamadhanReport | null>(null);
   const [qurbanData, setQurbanData] = useState<QurbanReport | null>(null);
 
   useEffect(() => {
@@ -414,11 +371,8 @@ function LaporanSection() {
     const fetchReport = async () => {
       try {
         if (activeTab === 'bulanan') {
-          const res = await fetch('/api/reports', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'bulanan', year, month }),
-          });
+          const params = new URLSearchParams({ year: String(year), month: String(month) });
+          const res = await fetch(`/api/reports/bulanan?${params}`);
           const json = await res.json();
           if (!cancelled && json.success) setBulananData(json.data);
         } else if (activeTab === 'jimpitan') {
@@ -430,10 +384,6 @@ function LaporanSection() {
           const res = await fetch(`/api/reports/zakat?year=${year}`);
           const json = await res.json();
           if (!cancelled && json.success) setZakatData(json.data);
-        } else if (activeTab === 'ramadhan') {
-          const res = await fetch(`/api/reports/ramadhan?year=${year}`);
-          const json = await res.json();
-          if (!cancelled && json.success) setRamadhanData(json.data);
         } else if (activeTab === 'qurban') {
           const res = await fetch(`/api/reports/qurban?year=${year}`);
           const json = await res.json();
@@ -450,74 +400,6 @@ function LaporanSection() {
     return () => { cancelled = true; };
   }, [activeTab, year, month]);
 
-  const handleDownloadCsv = () => {
-    const urls: Record<ReportTab, string> = {
-      bulanan: `/api/reports/csv`,
-      jimpitan: `/api/reports/jimpitan/csv?year=${year}&month=${month}`,
-      zakat: `/api/reports/zakat/csv?year=${year}`,
-      ramadhan: `/api/reports/ramadhan/csv?year=${year}`,
-      qurban: `/api/reports/qurban/csv?year=${year}`,
-    };
-    if (activeTab === 'bulanan') {
-      // POST needed for bulanan CSV
-      fetch('/api/reports/csv', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'bulanan', year, month }),
-      })
-        .then(r => r.blob())
-        .then(blob => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `laporan-bulanan-${year}-${String(month).padStart(2, '0')}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
-        });
-    } else {
-      window.open(urls[activeTab], '_blank');
-    }
-  };
-
-  const handlePrint = () => {
-    const urls: Record<ReportTab, string> = {
-      bulanan: `/api/reports/pdf`,
-      jimpitan: `/api/reports/jimpitan/html?year=${year}&month=${month}`,
-      zakat: `/api/reports/zakat/html?year=${year}`,
-      ramadhan: `/api/reports/ramadhan/html?year=${year}`,
-      qurban: `/api/reports/qurban/html?year=${year}`,
-    };
-    if (activeTab === 'bulanan') {
-      fetch('/api/reports/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'bulanan', year, month }),
-      })
-        .then(r => r.text())
-        .then(html => {
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-          }
-        });
-    } else {
-      window.open(urls[activeTab], '_blank');
-    }
-  };
-
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
-  const months = [
-    { value: 1, label: 'Januari' }, { value: 2, label: 'Februari' },
-    { value: 3, label: 'Maret' }, { value: 4, label: 'April' },
-    { value: 5, label: 'Mei' }, { value: 6, label: 'Juni' },
-    { value: 7, label: 'Juli' }, { value: 8, label: 'Agustus' },
-    { value: 9, label: 'September' }, { value: 10, label: 'Oktober' },
-    { value: 11, label: 'November' }, { value: 12, label: 'Desember' },
-  ];
-
-  const showMonth = activeTab === 'bulanan' || activeTab === 'jimpitan';
 
   return (
     <section id="laporan" class={`section ${s.laporan}`} ref={ref as never}>
@@ -542,26 +424,6 @@ function LaporanSection() {
           ))}
         </div>
 
-        {/* Filters */}
-        <div class={s.reportFilters}>
-          <select
-            class={s.reportSelect}
-            value={year}
-            onChange={(e) => setYear(Number((e.target as HTMLSelectElement).value))}
-          >
-            {years.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          {showMonth && (
-            <select
-              class={s.reportSelect}
-              value={month}
-              onChange={(e) => setMonth(Number((e.target as HTMLSelectElement).value))}
-            >
-              {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
-          )}
-        </div>
-
         {/* Loading */}
         {loading && (
           <div class={s.loader}>
@@ -584,22 +446,10 @@ function LaporanSection() {
             {activeTab === 'bulanan' && bulananData && <BulananReport data={bulananData} />}
             {activeTab === 'jimpitan' && jimpitanData && <JimpitanReportView data={jimpitanData} />}
             {activeTab === 'zakat' && zakatData && <ZakatReportView data={zakatData} />}
-            {activeTab === 'ramadhan' && ramadhanData && <RamadhanReportView data={ramadhanData} />}
             {activeTab === 'qurban' && qurbanData && <QurbanReportView data={qurbanData} />}
           </div>
         )}
 
-        {/* Download actions */}
-        {!loading && !error && (
-          <div class={s.reportActions}>
-            <button class="btn btn-ghost" onClick={handleDownloadCsv}>
-              <Download size={16} /> Unduh CSV
-            </button>
-            <button class="btn btn-ghost" onClick={handlePrint}>
-              <Printer size={16} /> Cetak / PDF
-            </button>
-          </div>
-        )}
       </div>
     </section>
   );
@@ -701,57 +551,38 @@ function ZakatReportView({ data }: { data: ZakatReport }) {
   );
 }
 
-function RamadhanReportView({ data }: { data: RamadhanReport }) {
-  return (
-    <>
-      <div class={s.reportStatsGrid}>
-        <StatCard icon={TrendingUp} label="Total Pemasukan" value={formatCurrency(data.totalPemasukan)} variant="in" />
-        <StatCard icon={TrendingDown} label="Total Pengeluaran" value={formatCurrency(data.totalPengeluaran)} variant="out" />
-        <StatCard icon={Scale} label="Saldo" value={formatCurrency(data.saldo)} variant="saldo" />
-      </div>
-      {data.pemasukanDetail.length > 0 && (
-        <div class={s.reportTableWrap}>
-          <h4 class={s.reportTableTitle}>Pemasukan per Jenis</h4>
-          <table class={s.reportTable}>
-            <thead>
-              <tr><th>Jenis</th><th class={s.reportTableAmount}>Jumlah</th></tr>
-            </thead>
-            <tbody>
-              {data.pemasukanDetail.map(d => (
-                <tr key={d.type}>
-                  <td>{d.type.charAt(0).toUpperCase() + d.type.slice(1)}</td>
-                  <td class={s.reportTableAmount}>{formatCurrency(d.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
-}
-
 function QurbanReportView({ data }: { data: QurbanReport }) {
+  const animalLabels: Record<string, string> = { sapi: 'Sapi', kambing: 'Kambing', domba: 'Domba' };
+  const grouped = data.donors.reduce<Record<string, typeof data.donors>>((acc, d) => {
+    (acc[d.animalType] ??= []).push(d);
+    return acc;
+  }, {});
+
   return (
     <>
-      {data.tiers.length > 0 && (
-        <div class={s.reportTableWrap}>
-          <h4 class={s.reportTableTitle}>Paket Qurban</h4>
-          <table class={s.reportTable}>
-            <thead>
-              <tr><th>Paket</th><th class={s.reportTableAmount}>Harga</th><th>Deskripsi</th></tr>
-            </thead>
-            <tbody>
-              {data.tiers.map(t => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td class={s.reportTableAmount}>{formatCurrency(t.amount)}</td>
-                  <td>{t.description || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {data.donors.length > 0 ? (
+        Object.entries(grouped).map(([type, donors]) => (
+          <div key={type} class={s.reportTableWrap}>
+            <h4 class={s.reportTableTitle}>{animalLabels[type] ?? type}</h4>
+            <table class={s.reportTable}>
+              <thead>
+                <tr><th>No</th><th>Nama Donatur</th><th>Bagian</th><th class={s.reportTableAmount}>Nominal</th></tr>
+              </thead>
+              <tbody>
+                {donors.map((d, i) => (
+                  <tr key={d.id}>
+                    <td>{i + 1}</td>
+                    <td>{d.name}</td>
+                    <td>{d.portion}</td>
+                    <td class={s.reportTableAmount}>{formatCurrency(d.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))
+      ) : (
+        <p style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>Belum ada data donatur qurban untuk tahun ini.</p>
       )}
       {data.totalOperasional > 0 && (
         <div class={s.reportStatsGrid}>

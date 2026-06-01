@@ -43,12 +43,13 @@ async function seed() {
     console.log('  admin     / Admin1234');
     console.log('  bendahara / Bendahara1234');
 
-    // Skip transaction/activity/tier seed if data already exists
-    if (txCount > 0) {
-      console.log('\nSeed data already present. Only users were upserted.');
-      return;
+    // Skip transaction/activity seed if data already exists
+    const skipTransactions = txCount > 0;
+    if (skipTransactions) {
+      console.log(`Database already has ${txCount} transactions. Skipping transaction/activity seed.`);
     }
 
+    if (!skipTransactions) {
     // ============================================================
     // 2. TRANSACTIONS — Jimpitan (bulanan per RT)
     // ============================================================
@@ -75,7 +76,7 @@ async function seed() {
 
     for (const [date, amount, description] of jimpitan) {
       await conn.execute(
-        'INSERT INTO transactions (type, amount, date, description) VALUES (?, ?, ?, ?)',
+        'INSERT IGNORE INTO transactions (type, amount, date, description) VALUES (?, ?, ?, ?)',
         ['jimpitan', amount, date, description]
       );
     }
@@ -95,7 +96,7 @@ async function seed() {
 
     for (const [date, amount, description, donorName] of hibah) {
       await conn.execute(
-        'INSERT INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
+        'INSERT IGNORE INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
         ['hibah', amount, date, description, donorName]
       );
     }
@@ -145,7 +146,7 @@ async function seed() {
 
     for (const [date, amount, description, donorName] of sedekah) {
       await conn.execute(
-        'INSERT INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
+        'INSERT IGNORE INTO transactions (type, amount, date, description, donor_name) VALUES (?, ?, ?, ?, ?)',
         ['sedekah', amount, date, description, donorName]
       );
     }
@@ -176,7 +177,7 @@ async function seed() {
 
     for (const [date, amount, description, category] of pengeluaran) {
       await conn.execute(
-        'INSERT INTO transactions (type, amount, date, description, category) VALUES (?, ?, ?, ?, ?)',
+        'INSERT IGNORE INTO transactions (type, amount, date, description, category) VALUES (?, ?, ?, ?, ?)',
         ['pengeluaran', amount, date, description, category]
       );
     }
@@ -198,14 +199,14 @@ async function seed() {
 
     for (const [name, amount, description, imageUrl, sortOrder] of tiers) {
       await conn.execute(
-        'INSERT INTO qurban_tiers (name, amount, description, image_url, sort_order) VALUES (?, ?, ?, ?, ?)',
+        'INSERT IGNORE INTO qurban_tiers (name, amount, description, image_url, sort_order) VALUES (?, ?, ?, ?, ?)',
         [name, amount, description, imageUrl, sortOrder]
       );
     }
     console.log(`Qurban tiers: ${tiers.length} records`);
 
     // ============================================================
-    // 8. ACTIVITIES — Kegiatan masjid
+    // 9. ACTIVITIES — Kegiatan masjid
     // ============================================================
     const activitiesData: [string, string, string, string, string, string, boolean][] = [
       ['Pengajian Selapanan Ahad Kliwonan', '2026-06-08', '20:00', 'besar', 'Pengajian umum tingkat dusun dengan penceramah dari luar desa. Silaturahmi warga se-Poncol.', '', true],
@@ -220,7 +221,7 @@ async function seed() {
 
     for (const [title, eventDate, eventTime, category, description, imageUrl, isActive] of activitiesData) {
       await conn.execute(
-        'INSERT INTO activities (title, event_date, event_time, category, description, image_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        'INSERT IGNORE INTO activities (title, event_date, event_time, category, description, image_url, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [title, eventDate, eventTime, category, description, imageUrl, isActive]
       );
     }
@@ -230,8 +231,52 @@ async function seed() {
     // Summary
     // ============================================================
     const totalTx = jimpitan.length + hibah.length + zakat.length + sedekah.length + pengeluaran.length;
+    console.log('\n=== Seed Summary ===');
+    console.log('Users: 2 (admin, bendahara)');
+    console.log(`Transactions: ${totalTx} total`);
+    console.log(`  - Jimpitan: ${jimpitan.length} (Jan-Jun, 3 RT)`);
+    console.log(`  - Hibah: ${hibah.length}`);
+    console.log(`  - Zakat: ${zakat.length} (Ramadhan season)`);
+    console.log(`  - Sedekah: ${sedekah.length} (Jumat + Ramadhan)`);
+    console.log(`  - Pengeluaran: ${pengeluaran.length} (operasional, perawatan, sosial)`);
+    console.log(`Qurban Tiers: ${tiers.length} (sapi, kambing, domba, sedekah)`);
+    console.log(`Activities: ${activitiesData.length} (7 aktif, 1 nonaktif)`);
+    } // end if (!skipTransactions)
+
     // ============================================================
-    // 6. ZAKAT RECIPIENTS — Penerima zakat (internal only)
+    // 9. QURBAN DONORS — Donatur qurban tahun berjalan (always seed)
+    // ============================================================
+    const qurbanYear = 2026;
+    const donors: [string, string, string, number, number][] = [
+      // Sapi 1/7 — 7 orang patungan
+      ['H. Suyitno', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Muhadi', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Pardi', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Sukimin', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Wahyudi', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Nurhadi', 'sapi', '1/7', 2500000, qurbanYear],
+      ['H. Sutrisno', 'sapi', '1/7', 2500000, qurbanYear],
+      // Sapi 1/1 — 1 kelompok patungan
+      ['Karang Taruna Dukuh Poncol', 'sapi', '1/1', 17500000, qurbanYear],
+      // Kambing — per orang
+      ['H. Khamim', 'kambing', '1', 2200000, qurbanYear],
+      ['H. Riyanto', 'kambing', '1', 2200000, qurbanYear],
+      ['Ngatimin', 'kambing', '1', 2200000, qurbanYear],
+      // Domba — per orang
+      ['H. Susanto', 'domba', '1', 2800000, qurbanYear],
+      ['H. Rohmad', 'domba', '1', 2800000, qurbanYear],
+    ];
+
+    for (const [name, animalType, portion, amount, year] of donors) {
+      await conn.execute(
+        'INSERT IGNORE INTO qurban_donors (name, animal_type, `portion`, amount, year) VALUES (?, ?, ?, ?, ?)',
+        [name, animalType, portion, amount, year]
+      );
+    }
+    console.log(`Qurban donors: ${donors.length} records`);
+
+    // ============================================================
+    // 10. ZAKAT RECIPIENTS — Penerima zakat (internal only, always seed)
     // ============================================================
     const [existingRecipients] = await conn.execute('SELECT COUNT(*) as cnt FROM zakat_recipients');
     const recipientCount = (existingRecipients as unknown as Array<{ cnt: number }>)[0]?.cnt ?? 0;
@@ -263,16 +308,7 @@ async function seed() {
       console.log(`Zakat Recipients: already has ${recipientCount} records, skipping.`);
     }
 
-    console.log('\n=== Seed Summary ===');
-    console.log('Users: 2 (admin, bendahara)');
-    console.log(`Transactions: ${totalTx} total`);
-    console.log(`  - Jimpitan: ${jimpitan.length} (Jan-Mei, 3 RT)`);
-    console.log(`  - Hibah: ${hibah.length}`);
-    console.log(`  - Zakat: ${zakat.length} (Ramadhan season)`);
-    console.log(`  - Sedekah: ${sedekah.length} (Jumat + Ramadhan)`);
-    console.log(`  - Pengeluaran: ${pengeluaran.length} (operasional, perawatan, sosial)`);
-    console.log(`Qurban Tiers: ${tiers.length} (sapi, kambing, domba, sedekah)`);
-    console.log(`Activities: ${activitiesData.length} (7 aktif, 1 nonaktif)`);
+    console.log(`Qurban Donors: ${donors.length} records`);
     console.log('====================');
   } finally {
     conn.release();
